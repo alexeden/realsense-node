@@ -19,10 +19,16 @@
     "camera",
     "intel"
   ],
-  "author": "Alex Eden",
-  "license": "MITNFA",
-  "bugs": {
-    "url": "https://github.com/alexeden/realsense-node/issues"
+  "devDependencies": {
+    "@types/node": "^12.6.9",
+    "chalk": "^2.4.2",
+    "nodemon": "^1.19.1",
+    "rimraf": "^2.6.3",
+    "tslint": "^5.18.0",
+    "typescript": "^3.5.3"
   },
-  "homepage": "https://github.com/alexeden/realsense-node#readme"
+  "dependencies": {
+    "bindings": "^1.5.0",
+    "node-addon-api": "^1.7.1"
+  }
 }
