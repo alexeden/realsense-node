@@ -1,0 +1,28 @@
+{
+  "name": "realsense-node",
+  "version": "1.0.0",
+  "description": "N-API/Typescript bindings for the Intel RealSense SDK",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alexeden/realsense-node.git"
+  },
+  "keywords": [
+    "realsense",
+    "n-api",
+    "napi",
+    "hardware",
+    "depth",
+    "camera",
+    "intel"
+  ],
+  "author": "Alex Eden",
+  "license": "MITNFA",
+  "bugs": {
+    "url": "https://github.com/alexeden/realsense-node/issues"
+  },
+  "homepage": "https://github.com/alexeden/realsense-node#readme"
+}
