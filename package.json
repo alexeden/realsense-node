@@ -3,12 +3,25 @@
   "version": "1.0.0",
   "description": "N-API/Typescript bindings for the Intel RealSense SDK",
   "main": "dist/index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "types": "dist/index.d.ts",
+  "author": "Alex Eden",
+  "license": "MITNFA",
+  "engines": {
+    "node": ">=8.0.0"
   },
+  "homepage": "https://github.com/alexeden/realsense-node#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/alexeden/realsense-node.git"
+  },
+  "bugs": {
+    "url": "https://github.com/alexeden/realsense-node/issues"
+  },
+  "scripts": {
+    "build": "rimraf dist && node-gyp rebuild && tsc -p src",
+    "lint": "tslint -c ./tslint.json --project src",
+    "quick-build": "rimraf dist && node-gyp build && tsc -p src",
+    "prepublishOnly": "npm run lint && npm run build"
   },
   "keywords": [
     "realsense",
