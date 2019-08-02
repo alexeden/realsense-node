@@ -20,8 +20,9 @@
   "scripts": {
     "build": "rimraf dist && node-gyp rebuild && tsc -p src",
     "lint": "tslint -c ./tslint.json --project src",
-    "quick-build": "rimraf dist && node-gyp build && tsc -p src",
-    "prepublishOnly": "npm run lint && npm run build"
+    "merge-submodule-upstream": "(cd vendor && git fetch && git merge origin/master)",
+    "prepublishOnly": "npm run lint && npm run build",
+    "quick-build": "rimraf dist && node-gyp build && tsc -p src"
   },
   "keywords": [
     "realsense",
