@@ -5,7 +5,17 @@
 
 #include <napi.h>
 
-Napi::Object Init(Napi::Env env, Napi::Object exports) {
+using namespace Napi;
+
+Value GetTime(const CallbackInfo& info) {
+	rs2_error* e = nullptr;
+	auto time = rs2_get_time(&e);
+	return Number::New(info.Env(), time);
+}
+
+Object Init(Env env, Object exports) {
+	exports.Set("getTime", Function::New(env, GetTime));
+
 	return exports;
 }
 
