@@ -1,1 +1,7 @@
-console.log('I am the realsense module!');
+import { RealSenseAddon } from './types';
+
+const addon: RealSenseAddon = require('bindings')('realsense-node');
+
+export {
+  addon,
+};

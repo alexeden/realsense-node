@@ -5,7 +5,7 @@
   },
   "targets": [
     {
-      "target_name": "rpi-led-matrix",
+      "target_name": "realsense-node",
       "sources": [
         "src/addon.cc",
       ],
@@ -40,9 +40,7 @@
           'OS=="mac"',
           {
             "libraries": [
-              '<(module_root_dir)/librealsense/build/<(configuration)/librealsense2.dylib',
-              # Write the below RPATH into the generated addon
-              '-Wl,-rpath,@loader_path/build/<(configuration)',
+              '-Wl,-rpath,<(module_root_dir)/librealsense/build/<(configuration)/librealsense2.dylib',
             ],
             'xcode_settings': {
               'GCC_ENABLE_CPP_EXCEPTIONS': 'YES',
