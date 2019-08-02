@@ -5,7 +5,7 @@
   },
   "targets": [
     {
-      "target_name": "realsense-node",
+      "target_name": "realsense_node",
       "sources": [
         "src/addon.cc",
       ],
@@ -40,7 +40,8 @@
           'OS=="mac"',
           {
             "libraries": [
-              '-Wl,-rpath,<(module_root_dir)/librealsense/build/<(configuration)/librealsense2.dylib',
+              '<(module_root_dir)/librealsense/build/<(configuration)/librealsense2.dylib',
+              '-Wl,-rpath,@loader_path/../../librealsense/build/<(configuration)',
             ],
             'xcode_settings': {
               'GCC_ENABLE_CPP_EXCEPTIONS': 'YES',
