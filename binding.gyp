@@ -40,7 +40,7 @@
           'OS=="mac"',
           {
             "libraries": [
-              '<(module_root_dir)/build/<(configuration)/librealsense2.dylib',
+              '<(module_root_dir)/librealsense/build/<(configuration)/librealsense2.dylib',
               # Write the below RPATH into the generated addon
               '-Wl,-rpath,@loader_path/build/<(configuration)',
             ],
