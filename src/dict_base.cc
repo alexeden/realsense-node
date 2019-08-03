@@ -54,16 +54,16 @@ class DictBase {
 
 	template<typename T, typename V, uint32_t len>
 	void SetMemberArray(const char* name, V value[len]) {
-		bject array = Array::New(_env, len);
+		Object array = Array::New(_env, len);
 		for (uint32_t i = 0; i < len; i++) {
-			array->Set(Nan::GetCurrentContext(), i, Nan::New<T>(value[i]));
+			array.Set(i, Value(value[i]).As<T>());
 		}
 		SetMember(name, array);
 	}
 
 	template<typename T>
 	void SetMemberT(const char* name, const T& value) {
-		_obj->Set(Nan::New(name).ToLocalChecked(), Nan::New(value));
+		_obj.Set(name, Value(value));
 	}
 
 	bool IsMemberPresent(const char* name) const {

@@ -5,7 +5,9 @@
 
 #include <napi.h>
 
-using namespace std;
+#include "dict_base.cc"
+
+// using namespace std;
 using namespace Napi;
 
 Value GetTime(const CallbackInfo& info) {
