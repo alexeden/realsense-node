@@ -12,17 +12,15 @@
 using namespace Napi;
 
 Value GetTime(const CallbackInfo& info) {
-	fprintf(stderr, "Getting time");
 	rs2_error* e = nullptr;
-	fprintf(stderr, "Got e");
 	auto time = rs2_get_time(&e);
-	fprintf(stderr, "Got time!");
 	return Number::New(info.Env(), time);
 }
 
-Napi::Value RegisterErrorCallback(const Napi::CallbackInfo& info) {
+Value RegisterErrorCallback(const CallbackInfo& info) {
   ErrorUtil::Init(info.Env());
   ErrorUtil::UpdateJSErrorCallback(info);
+
   return info.Env().Undefined();
 }
 
