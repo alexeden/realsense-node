@@ -3,7 +3,10 @@
 
 #include <string>
 #include <napi.h>
+#include <librealsense2/hpp/rs_types.hpp>
 #include "dict_base.cc";
+
+using namespace Napi;
 
 class ErrorUtil {
   public:
@@ -29,12 +32,13 @@ class ErrorUtil {
 		}
 
 		// set value to js attributes only when this method is called
-		Napi::Object GetJSObject() {
-			DictBase obj;
-			obj.SetMemberT("recoverable", recoverable_);
-			obj.SetMember("description", description_);
-			obj.SetMember("nativeFunction", native_function_);
-			return obj.GetObject();
+		Object GetJSObject(Env env) {
+			auto obj = Object::New(env);
+			obj.Set("recoverable", recoverable_);
+			obj.Set("description", description_);
+			obj.Set("nativeFunction", native_function_);
+
+			return obj;
 		}
 
 	  private:
@@ -46,32 +50,38 @@ class ErrorUtil {
 		friend class ErrorUtil;
 	};
 
+	ErrorUtil(Env env)
+	  : env_(env) {
+	}
+
 	~ErrorUtil() {
 	}
 
-	static void Init() {
-		if (!singleton_) singleton_ = new ErrorUtil();
+	static void Init(Env env) {
+		if (!singleton_) singleton_ = new ErrorUtil(env);
 	}
 
-	static void UpdateJSErrorCallback(const Nan::FunctionCallbackInfo<v8::Value>& info) {
-		singleton_->js_error_container_.Reset(info[0]->ToObject());
-		v8::String::Utf8Value value(info[1]->ToString());
-		singleton_->js_error_callback_name_ = std::string(*value);
+	/**
+	 * info[0] -> The object with a key whose value is the function to call
+	 * info[1] -> The key of the function to call
+	 */
+	static void UpdateJSErrorCallback(const CallbackInfo& info) {
+		singleton_->js_error_container_.Reset(info[0].As<Object>());
+		auto value = std::string(info[1].As<String>());
+		singleton_->js_error_callback_name_ = value;
 	}
 
 	static void AnalyzeError(rs2_error* err) {
 		if (!err) return;
 
-		auto function	 = std::string(rs2_get_failed_function(err));
+		auto function	= std::string(rs2_get_failed_function(err));
 		auto type		 = rs2_get_librealsense_exception_type(err);
 		auto msg		 = std::string(rs2_get_error_message(err));
 		bool recoverable = false;
 
 		if (
-		  type == RS2_EXCEPTION_TYPE_INVALID_VALUE
-		  || type == RS2_EXCEPTION_TYPE_WRONG_API_CALL_SEQUENCE
-		  || type == RS2_EXCEPTION_TYPE_NOT_IMPLEMENTED
-		) {
+		  type == RS2_EXCEPTION_TYPE_INVALID_VALUE || type == RS2_EXCEPTION_TYPE_WRONG_API_CALL_SEQUENCE
+		  || type == RS2_EXCEPTION_TYPE_NOT_IMPLEMENTED) {
 			recoverable = true;
 		}
 
@@ -82,24 +92,24 @@ class ErrorUtil {
 		singleton_->error_info_.Reset();
 	}
 
-	static v8::Local<v8::Value> GetJSErrorObject() {
-		if (singleton_->error_info_.is_error_) return singleton_->error_info_.GetJSObject();
+	static Value GetJSErrorObject(Env env) {
+		if (singleton_->error_info_.is_error_) return singleton_->error_info_.GetJSObject(env);
 
-		return Nan::Undefined();
+		return env.Undefined();
 	}
 
   private:
 	// Save detailed error info to the js object
 	void MarkError(bool recoverable, std::string description, std::string native_function) {
 		error_info_.Update(true, recoverable, description, native_function);
-		v8::Local<v8::Value> args[1] = { GetJSErrorObject() };
-		auto container				 = Nan::New<v8::Object>(js_error_container_);
-		Nan::MakeCallback(container, js_error_callback_name_.c_str(), 1, args);
+		auto cb = js_error_container_.Get(js_error_callback_name_.c_str()).As<Function>();
+		cb.Call({ GetJSErrorObject(env_) });
 	}
 
 	static ErrorUtil* singleton_;
+	Env env_;
 	ErrorInfo error_info_;
-	Nan::Persistent<v8::Object> js_error_container_;
+	ObjectReference js_error_container_;
 	std::string js_error_callback_name_;
 };
 

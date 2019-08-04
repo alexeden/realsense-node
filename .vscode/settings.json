@@ -19,6 +19,7 @@
     "*.cc": "cpp",
     ".clang-format": "yaml",
     "iosfwd": "cpp",
-    "string": "cpp"
+    "string": "cpp",
+    "initializer_list": "cpp"
   }
 }

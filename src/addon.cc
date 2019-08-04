@@ -6,6 +6,7 @@
 #include <napi.h>
 
 #include "dict_base.cc"
+#include "error_util.cc"
 
 // using namespace std;
 using namespace Napi;
