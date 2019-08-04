@@ -1,10 +1,8 @@
 import { RealSenseAddon } from './types';
 
-const addon: RealSenseAddon = require('bindings')('realsense_node');
-
-console.log('addon!', addon);
-console.log('time: ', addon.getTime());
+const { getTime, registerErrorCallback }: RealSenseAddon = require('bindings')('realsense_node');
 
 export {
-  addon,
+  getTime,
+  registerErrorCallback,
 };

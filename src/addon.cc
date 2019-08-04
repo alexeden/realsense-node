@@ -20,9 +20,16 @@ Value GetTime(const CallbackInfo& info) {
 	return Number::New(info.Env(), time);
 }
 
+Napi::Value RegisterErrorCallback(const Napi::CallbackInfo& info) {
+  ErrorUtil::Init(info.Env());
+  ErrorUtil::UpdateJSErrorCallback(info);
+  return info.Env().Undefined();
+}
+
+
 Object Init(Env env, Object exports) {
 	exports.Set("getTime", Function::New(env, GetTime));
-
+	exports.Set("registerErrorCallback", Function::New(env, RegisterErrorCallback));
 	return exports;
 }
 
