@@ -5,7 +5,7 @@
 
 using namespace Napi;
 
-class RSDeviceList : public Nan::ObjectWrap {
+class RSDeviceList : public ObjectWrap<RSDeviceList> {
   public:
 	static void Init(v8::Local<v8::Object> exports) {
 		v8::Local<v8::FunctionTemplate> tpl = Nan::New<v8::FunctionTemplate>(New);

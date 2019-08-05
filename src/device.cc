@@ -1,6 +1,8 @@
 #ifndef DEVICE_H
 #define DEVICE_H
 
+#include "main_thread_callback.cc"
+#include "utils.cc"
 #include <librealsense2/hpp/rs_types.hpp>
 #include <napi.h>
 
@@ -10,7 +12,6 @@ FunctionReference RSDevice::constructor;
 
 class RSDevice : public ObjectWrap<RSDevice> {
   public:
-
 	enum DeviceType {
 		kNormalDevice = 0,
 		kRecorderDevice,
@@ -73,7 +74,6 @@ class RSDevice : public ObjectWrap<RSDevice> {
 
 		Object instance = cons->NewInstance(context, 0, nullptr).ToLocalChecked();
 
-		auto me   = Nan::ObjectWrap::Unwrap<RSDevice>(instance);
 		me->dev_  = dev;
 		me->type_ = type;
 
@@ -98,78 +98,62 @@ class RSDevice : public ObjectWrap<RSDevice> {
 		dev_ = nullptr;
 	}
 
-	static void New(const Napi::CallbackInfo& info) {
+	void New(const Napi::CallbackInfo& info) {
 		if (info.IsConstructCall()) {
 			RSDevice* obj = new RSDevice();
 			obj->Wrap(info.This());
-			info.GetReturnValue().Set(info.This());
+			return info.This();
 		}
 	}
 
-	static Value GetCameraInfo(const Napi::CallbackInfo& info) {
-		info.GetReturnValue().Set(Nan::Undefined());
-		int32_t camera_info = info[0]->IntegerValue();
-		;
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		if (!me) return;
+	Napi::Value GetCameraInfo(const Napi::CallbackInfo& info) {
+		int32_t camera_info = info[0].As<Number>().Int32Value();
 
 		auto value = GetNativeResult<
-		  const char*>(rs2_get_device_info, &me->error_, me->dev_, static_cast<rs2_camera_info>(camera_info), &me->error_);
-		if (me->error_) return;
+		  const char*>(rs2_get_device_info, &this->error_, this->dev_, static_cast<rs2_camera_info>(camera_info), &this->error_);
+		if (this->error_) return;
 
-		info.GetReturnValue().Set(Nan::New(value).ToLocalChecked());
+		return String::New(value);
 	}
 
-	static Value Destroy(const Napi::CallbackInfo& info) {
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		if (me) { me->DestroyMe(); }
-		info.GetReturnValue().Set(Nan::Undefined());
+	Napi::Value Destroy(const Napi::CallbackInfo& info) {
+		this->DestroyMe();
+		return info.Env().Undefined();
 	}
 
-	static Value SupportsCameraInfo(const Napi::CallbackInfo& info) {
-		info.GetReturnValue().Set(Nan::False());
-		int32_t camera_info = info[0]->IntegerValue();
-		auto me				= Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		if (!me) return;
-
+	Napi::Value SupportsCameraInfo(const Napi::CallbackInfo& info) {
+		int32_t camera_info = info[0].As<Number>().Int32Value();
 		int32_t on = GetNativeResult<
-		  int>(rs2_supports_device_info, &me->error_, me->dev_, (rs2_camera_info) camera_info, &me->error_);
-		if (me->error_) return;
-		info.GetReturnValue().Set(Nan::New(on ? true : false));
+		  int>(rs2_supports_device_info, &this->error_, this->dev_, (rs2_camera_info) camera_info, &this->error_);
+		if (this->error_) return;
+
+		return on ? Boolean::New(info.Env(), true) : Boolean::New(info.Env(), false);
 	}
 
-	static Value Reset(const Napi::CallbackInfo& info) {
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		if (!me) return;
-
-		CallNativeFunc(rs2_hardware_reset, &me->error_, me->dev_, &me->error_);
+	Napi::Value Reset(const Napi::CallbackInfo& info) {
+		CallNativeFunc(rs2_hardware_reset, &this->error_, this->dev_, &this->error_);
+		return info.This();
 	}
 
-	static Value QuerySensors(const Napi::CallbackInfo& info) {
-		info.GetReturnValue().Set(Nan::Undefined());
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		if (!me) return;
-
+	Napi::Value QuerySensors(const Napi::CallbackInfo& info) {
 		std::shared_ptr<rs2_sensor_list>
-		list(GetNativeResult<rs2_sensor_list*>(rs2_query_sensors, &me->error_, me->dev_, &me->error_), rs2_delete_sensor_list);
+		list(GetNativeResult<rs2_sensor_list*>(rs2_query_sensors, &this->error_, this->dev_, &this->error_), rs2_delete_sensor_list);
 		if (!list) return;
 
-		auto size = GetNativeResult<int>(rs2_get_sensors_count, &me->error_, list.get(), &me->error_);
+		auto size = GetNativeResult<int>(rs2_get_sensors_count, &this->error_, list.get(), &this->error_);
 		if (!size) return;
 
-		v8::Local<v8::Array> array = Nan::New<v8::Array>();
+		auto array = Napi::Array::New(info.Env());
 		for (int32_t i = 0; i < size; i++) {
 			rs2_sensor* sensor
-			  = GetNativeResult<rs2_sensor*>(rs2_create_sensor, &me->error_, list.get(), i, &me->error_);
-			array->Set(i, RSSensor::NewInstance(sensor));
+			  = GetNativeResult<rs2_sensor*>(rs2_create_sensor, &this->error_, list.get(), i, &this->error_);
+			array.Set(i, RSSensor::NewInstance(sensor));
 		}
-		info.GetReturnValue().Set(array);
+
+		return array;
 	}
 
-	static Value TriggerErrorForTest(const Napi::CallbackInfo& info) {
-		info.GetReturnValue().Set(Nan::Undefined());
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		if (!me) return;
+	Napi::Value TriggerErrorForTest(const Napi::CallbackInfo& info) {
 
 		uint8_t raw_data[24] = { 0 };
 		raw_data[0]			 = 0x14;
@@ -177,238 +161,165 @@ class RSDevice : public ObjectWrap<RSDevice> {
 		raw_data[3]			 = 0xcd;
 		raw_data[4]			 = 0x4d;
 		raw_data[8]			 = 4;
-		CallNativeFunc(rs2_send_and_receive_raw_data, &me->error_, me->dev_, static_cast<void*>(raw_data), 24, &me->error_);
+		CallNativeFunc(rs2_send_and_receive_raw_data, &this->error_, this->dev_, static_cast<void*>(raw_data), 24, &this->error_);
 	}
 
-	static Value SpawnRecorderDevice(const Napi::CallbackInfo& info) {
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		info.GetReturnValue().Set(Nan::Undefined());
-		if (!me) return;
+	Napi::Value SpawnRecorderDevice(const Napi::CallbackInfo& info) {
+		std::string file = info[0].As<String>().ToString();
+		auto dev = GetNativeResult<rs2_device*>(rs2_create_record_device, &this->error_, this->dev_, file, &this->error_);
+		if (this->error_) return;
 
-		v8::String::Utf8Value file(info[0]->ToString());
-		auto dev = GetNativeResult<rs2_device*>(rs2_create_record_device, &me->error_, me->dev_, *file, &me->error_);
-		if (me->error_) return;
-
-		auto obj = RSDevice::NewInstance(dev, kRecorderDevice);
-		info.GetReturnValue().Set(obj);
+		return RSDevice::NewInstance(dev, kRecorderDevice);
 	}
 
-	static Value PauseRecord(const Napi::CallbackInfo& info) {
-		info.GetReturnValue().Set(Nan::Undefined());
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		if (!me) return;
-
-		CallNativeFunc(rs2_record_device_pause, &me->error_, me->dev_, &me->error_);
+	Napi::Value PauseRecord(const Napi::CallbackInfo& info) {
+		CallNativeFunc(rs2_record_device_pause, &this->error_, this->dev_, &this->error_);
+		return info.This();
 	}
 
-	static Value ResumeRecord(const Napi::CallbackInfo& info) {
-		info.GetReturnValue().Set(Nan::Undefined());
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		if (!me) return;
-
-		CallNativeFunc(rs2_record_device_resume, &me->error_, me->dev_, &me->error_);
+	Napi::Value ResumeRecord(const Napi::CallbackInfo& info) {
+		CallNativeFunc(rs2_record_device_resume, &this->error_, this->dev_, &this->error_);
+		return info.This();
 	}
 
-	static Value GetFileName(const Napi::CallbackInfo& info) {
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		info.GetReturnValue().Set(Nan::Undefined());
-		if (!me) return;
-
+	Napi::Value GetFileName(const Napi::CallbackInfo& info) {
 		const char* file = nullptr;
-		if (me->IsPlaybackInternal()) {
-			file = GetNativeResult<const char*>(rs2_playback_device_get_file_path, &me->error_, me->dev_, &me->error_);
+		if (this->IsPlaybackInternal()) {
+			file = GetNativeResult<
+			  const char*>(rs2_playback_device_get_file_path, &this->error_, this->dev_, &this->error_);
 		}
-		else if (me->IsRecorderInternal()) {
-			file = GetNativeResult<const char*>(rs2_record_device_filename, &me->error_, me->dev_, &me->error_);
+		else if (this->IsRecorderInternal()) {
+			file = GetNativeResult<const char*>(rs2_record_device_filename, &this->error_, this->dev_, &this->error_);
 		}
 		else {
 			return;
 		}
-		if (me->error_) return;
+		if (this->error_) return;
 
-		info.GetReturnValue().Set(Nan::New(file).ToLocalChecked());
+		return String::New(info.Env(), file);
 	}
 
-	static Value PausePlayback(const Napi::CallbackInfo& info) {
-		info.GetReturnValue().Set(Nan::Undefined());
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		if (!me) return;
-
-		CallNativeFunc(rs2_playback_device_pause, &me->error_, me->dev_, &me->error_);
+	Napi::Value PausePlayback(const Napi::CallbackInfo& info) {
+		CallNativeFunc(rs2_playback_device_pause, &this->error_, this->dev_, &this->error_);
+		return info.This();
 	}
 
-	static Value ResumePlayback(const Napi::CallbackInfo& info) {
-		info.GetReturnValue().Set(Nan::Undefined());
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		if (!me) return;
-
-		CallNativeFunc(rs2_playback_device_resume, &me->error_, me->dev_, &me->error_);
+	Napi::Value ResumePlayback(const Napi::CallbackInfo& info) {
+		CallNativeFunc(rs2_playback_device_resume, &this->error_, this->dev_, &this->error_);
+		return info.This();
 	}
 
-	static Value StopPlayback(const Napi::CallbackInfo& info) {
-		info.GetReturnValue().Set(Nan::Undefined());
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		if (!me) return;
-
-		CallNativeFunc(rs2_playback_device_stop, &me->error_, me->dev_, &me->error_);
+	Napi::Value StopPlayback(const Napi::CallbackInfo& info) {
+		CallNativeFunc(rs2_playback_device_stop, &this->error_, this->dev_, &this->error_);
+		return info.This();
 	}
 
-	static Value GetPosition(const Napi::CallbackInfo& info) {
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		info.GetReturnValue().Set(Nan::Undefined());
-		if (!me) return;
-
+	Napi::Value GetPosition(const Napi::CallbackInfo& info) {
 		auto pos = static_cast<uint32_t>(
-		  GetNativeResult<uint32_t>(rs2_playback_get_position, &me->error_, me->dev_, &me->error_) / 1000000);
-		info.GetReturnValue().Set(Nan::New(pos));
+		  GetNativeResult<uint32_t>(rs2_playback_get_position, &this->error_, this->dev_, &this->error_) / 1000000);
+
+		return Number::New(info.Env(), pos);
 	}
 
-	static Value GetDuration(const Napi::CallbackInfo& info) {
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		info.GetReturnValue().Set(Nan::Undefined());
-		if (!me) return;
-
+	Napi::Value GetDuration(const Napi::CallbackInfo& info) {
 		auto duration = static_cast<uint32_t>(
-		  GetNativeResult<uint32_t>(rs2_playback_get_duration, &me->error_, me->dev_, &me->error_) / 1000000);
-		info.GetReturnValue().Set(Nan::New(duration));
+		  GetNativeResult<uint32_t>(rs2_playback_get_duration, &this->error_, this->dev_, &this->error_) / 1000000);
+
+		return Number::New(info.Env(), duration);
 	}
 
-	static Value Seek(const Napi::CallbackInfo& info) {
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		info.GetReturnValue().Set(Nan::Undefined());
-		if (!me) return;
+	Napi::Value Seek(const Napi::CallbackInfo& info) {
+		uint64_t time = info[0].As<Number>().Int32Value();
+		CallNativeFunc(rs2_playback_seek, &this->error_, this->dev_, time * 1000000, &this->error_);
 
-		uint64_t time = info[0]->IntegerValue();
-		CallNativeFunc(rs2_playback_seek, &me->error_, me->dev_, time * 1000000, &me->error_);
+		return info.This();
 	}
 
-	static Value IsRealTime(const Napi::CallbackInfo& info) {
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		info.GetReturnValue().Set(Nan::Undefined());
-		if (!me) return;
+	Napi::Value IsRealTime(const Napi::CallbackInfo& info) {
+		auto val = GetNativeResult<int>(rs2_playback_device_is_real_time, &this->error_, this->dev_, &this->error_);
+		if (this->error_) return;
 
-		auto val = GetNativeResult<int>(rs2_playback_device_is_real_time, &me->error_, me->dev_, &me->error_);
-		if (me->error_) return;
-
-		info.GetReturnValue().Set(val ? Nan::True() : Nan::False());
+		return val ? Boolean::New(info.Env(), true) : Boolean::New(info.Env(), false);
 	}
 
-	static Value SetIsRealTime(const Napi::CallbackInfo& info) {
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		info.GetReturnValue().Set(Nan::Undefined());
-		if (!me) return;
+	Napi::Value SetIsRealTime(const Napi::CallbackInfo& info) {
+		auto val = info[0].As<Boolean>().ToBoolean();
+		CallNativeFunc(rs2_playback_device_set_real_time, &this->error_, this->dev_, val, &this->error_);
 
-		auto val = info[0]->BooleanValue();
-		CallNativeFunc(rs2_playback_device_set_real_time, &me->error_, me->dev_, val, &me->error_);
+		return info.This();
 	}
 
-	static Value SetPlaybackSpeed(const Napi::CallbackInfo& info) {
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		info.GetReturnValue().Set(Nan::Undefined());
-		if (!me) return;
+	Napi::Value SetPlaybackSpeed(const Napi::CallbackInfo& info) {
+		auto speed = info[0].As<Number>().ToNumber().Uint32Value();
+		CallNativeFunc(rs2_playback_device_set_playback_speed, &this->error_, this->dev_, speed, &this->error_);
 
-		auto speed = info[0]->NumberValue();
-		CallNativeFunc(rs2_playback_device_set_playback_speed, &me->error_, me->dev_, speed, &me->error_);
+		return info.This();
 	}
 
-	static Value IsPlayback(const Napi::CallbackInfo& info) {
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		info.GetReturnValue().Set(Nan::Undefined());
-		if (!me) return;
-
-		auto val = me->IsPlaybackInternal();
-		info.GetReturnValue().Set(val ? Nan::True() : Nan::False());
+	Napi::Value IsPlayback(const Napi::CallbackInfo& info) {
+		auto val = this->IsPlaybackInternal();
+		return val ? Boolean::New(info.Env(), true) : Boolean::New(info.Env(), false);
 	}
 
-	static Value IsRecorder(const Napi::CallbackInfo& info) {
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		info.GetReturnValue().Set(Nan::Undefined());
-		if (!me) return;
-
-		auto val = me->IsRecorderInternal();
-		info.GetReturnValue().Set(val ? Nan::True() : Nan::False());
+	Napi::Value IsRecorder(const Napi::CallbackInfo& info) {
+		auto val = this->IsRecorderInternal();
+		return val ? Boolean::New(info.Env(), true) : Boolean::New(info.Env(), false);
 	}
 
-	static Value GetCurrentStatus(const Napi::CallbackInfo& info) {
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		info.GetReturnValue().Set(Nan::Undefined());
-		if (!me) return;
-
+	Napi::Value GetCurrentStatus(const Napi::CallbackInfo& info) {
 		auto status = GetNativeResult<
-		  rs2_playback_status>(rs2_playback_device_get_current_status, &me->error_, me->dev_, &me->error_);
-		if (me->error_) return;
+		  rs2_playback_status>(rs2_playback_device_get_current_status, &this->error_, this->dev_, &this->error_);
+		if (this->error_) return;
 
-		info.GetReturnValue().Set(Nan::New(status));
+		return Number::New(info.Env(), status);
 	}
 
-	static Value SetStatusChangedCallbackMethodName(const Napi::CallbackInfo& info) {
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		info.GetReturnValue().Set(Nan::Undefined());
-		if (!me) return;
-
-		v8::String::Utf8Value method(info[0]->ToString());
-		me->status_changed_callback_method_name_ = std::string(*method);
+	Napi::Value SetStatusChangedCallbackMethodName(const Napi::CallbackInfo& info) {
+		std::string method						   = info[0].As<String>().ToString();
+		this->status_changed_callback_method_name_ = method;
 		CallNativeFunc(
 		  rs2_playback_device_set_status_changed_callback,
-		  &me->error_,
-		  me->dev_,
-		  new PlaybackStatusCallback(me),
-		  &me->error_);
+		  &this->error_,
+		  this->dev_,
+		  new PlaybackStatusCallback(this),
+		  &this->error_);
+
+		return info.This();
 	}
 
-	static Value IsTm2(const Napi::CallbackInfo& info) {
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		info.GetReturnValue().Set(Nan::Undefined());
-		if (!me) return;
-
-		auto val
-		  = GetNativeResult<int>(rs2_is_device_extendable_to, &me->error_, me->dev_, RS2_EXTENSION_TM2, &me->error_);
-		info.GetReturnValue().Set(val ? Nan::True() : Nan::False());
+	Napi::Value IsTm2(const Napi::CallbackInfo& info) {
+		auto val = GetNativeResult<
+		  int>(rs2_is_device_extendable_to, &this->error_, this->dev_, RS2_EXTENSION_TM2, &this->error_);
+		return val ? Boolean::New(info.Env(), true) : Boolean::New(info.Env(), false);
 	}
 
-	static Value EnableLoopback(const Napi::CallbackInfo& info) {
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		info.GetReturnValue().Set(Nan::Undefined());
-		if (!me) return;
-
-		v8::String::Utf8Value file(info[0]->ToString());
-		CallNativeFunc(rs2_loopback_enable, &me->error_, me->dev_, *file, &me->error_);
+	Napi::Value EnableLoopback(const Napi::CallbackInfo& info) {
+		std::string file = info[0].As<String>().ToString();
+		CallNativeFunc(rs2_loopback_enable, &this->error_, this->dev_, file, &this->error_);
 	}
 
-	static Value DisableLoopback(const Napi::CallbackInfo& info) {
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		info.GetReturnValue().Set(Nan::Undefined());
-		if (!me) return;
-
-		CallNativeFunc(rs2_loopback_disable, &me->error_, me->dev_, &me->error_);
+	Napi::Value DisableLoopback(const Napi::CallbackInfo& info) {
+		CallNativeFunc(rs2_loopback_disable, &this->error_, this->dev_, &this->error_);
 	}
 
-	static Value IsLoopbackEnabled(const Napi::CallbackInfo& info) {
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		info.GetReturnValue().Set(Nan::Undefined());
-		if (!me) return;
-
-		auto val = GetNativeResult<int>(rs2_loopback_is_enabled, &me->error_, me->dev_, &me->error_);
-		info.GetReturnValue().Set(val ? Nan::True() : Nan::False());
+	Napi::Value IsLoopbackEnabled(const Napi::CallbackInfo& info) {
+		auto val = GetNativeResult<int>(rs2_loopback_is_enabled, &this->error_, this->dev_, &this->error_);
+		return val ? Boolean::New(info.Env(), true) : Boolean::New(info.Env(), false);
 	}
 
-	static Value ConnectController(const Napi::CallbackInfo& info) {
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		info.GetReturnValue().Set(Nan::Undefined());
-		if (!me) return;
-
-		auto array_buffer = v8::Local<v8::ArrayBuffer>::Cast(info[0]);
-		auto contents	 = array_buffer->GetContents();
-		CallNativeFunc(rs2_connect_tm2_controller, &me->error_, me->dev_, static_cast<const uint8_t*>(contents.Data()), &me->error_);
+	Napi::Value ConnectController(const Napi::CallbackInfo& info) {
+		auto array_buffer = info[0].As<ArrayBuffer>();
+		CallNativeFunc(
+		  rs2_connect_tm2_controller,
+		  &this->error_,
+		  this->dev_,
+		  static_cast<const uint8_t*>(array_buffer.Data()),
+		  &this->error_);
 	}
 
-	static Value DisconnectController(const Napi::CallbackInfo& info) {
-		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
-		info.GetReturnValue().Set(Nan::Undefined());
-		if (!me) return;
-
-		auto id = info[0]->IntegerValue();
-		CallNativeFunc(rs2_disconnect_tm2_controller, &me->error_, me->dev_, id, &me->error_);
+	Napi::Value DisconnectController(const Napi::CallbackInfo& info) {
+		auto id = info[0].As<Number>().Int32Value();
+		CallNativeFunc(rs2_disconnect_tm2_controller, &this->error_, this->dev_, id, &this->error_);
 	}
 
   private:
@@ -436,6 +347,5 @@ class RSDevice : public ObjectWrap<RSDevice> {
 	friend class RSDeviceHub;
 	friend class PlaybackStatusCallbackInfo;
 };
-
 
 #endif
