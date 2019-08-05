@@ -2,6 +2,8 @@
 #define MAINTHREADCALLBACK_H
 
 #include <list>
+#include <napi.h>
+#include <uv.h>
 
 using namespace std;
 
@@ -75,6 +77,7 @@ class MainThreadCallback {
 		if (MainThreadCallbackInfo::InfoExist(info)) delete info;
 	}
 	static MainThreadCallback* singleton_;
+
 	uv_async_t* async_;
 };
 
