@@ -1,67 +1,77 @@
 #ifndef DEVICE_H
 #define DEVICE_H
 
+#include <librealsense2/hpp/rs_types.hpp>
 #include <napi.h>
 
 using namespace Napi;
 
-class RSDevice : public Nan::ObjectWrap {
+FunctionReference RSDevice::constructor;
+
+class RSDevice : public ObjectWrap<RSDevice> {
   public:
+
 	enum DeviceType {
 		kNormalDevice = 0,
 		kRecorderDevice,
 		kPlaybackDevice,
 	};
-	static void Init(v8::Local<v8::Object> exports) {
-		v8::Local<v8::FunctionTemplate> tpl = Nan::New<v8::FunctionTemplate>(New);
-		tpl->SetClassName(Nan::New("RSDevice").ToLocalChecked());
-		tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
-		Nan::SetPrototypeMethod(tpl, "destroy", Destroy);
-		Nan::SetPrototypeMethod(tpl, "getCameraInfo", GetCameraInfo);
-		Nan::SetPrototypeMethod(tpl, "supportsCameraInfo", SupportsCameraInfo);
-		Nan::SetPrototypeMethod(tpl, "reset", Reset);
-		Nan::SetPrototypeMethod(tpl, "querySensors", QuerySensors);
-		Nan::SetPrototypeMethod(tpl, "triggerErrorForTest", TriggerErrorForTest);
-		Nan::SetPrototypeMethod(tpl, "spawnRecorderDevice", SpawnRecorderDevice);
+	static Object Init(Napi::Env env, Object exports) {
+		Napi::Function func = DefineClass(
+		  env,
+		  "RSDevice",
+		  {
+			InstanceMethod("destroy", &RSDevice::Destroy),
+			InstanceMethod("getCameraInfo", &RSDevice::GetCameraInfo),
+			InstanceMethod("supportsCameraInfo", &RSDevice::SupportsCameraInfo),
+			InstanceMethod("reset", &RSDevice::Reset),
+			InstanceMethod("querySensors", &RSDevice::QuerySensors),
+			InstanceMethod("triggerErrorForTest", &RSDevice::TriggerErrorForTest),
+			InstanceMethod("spawnRecorderDevice", &RSDevice::SpawnRecorderDevice),
 
-		// Methods for record or playback
-		Nan::SetPrototypeMethod(tpl, "pauseRecord", PauseRecord);
-		Nan::SetPrototypeMethod(tpl, "resumeRecord", ResumeRecord);
-		Nan::SetPrototypeMethod(tpl, "getFileName", GetFileName);
-		Nan::SetPrototypeMethod(tpl, "pausePlayback", PausePlayback);
-		Nan::SetPrototypeMethod(tpl, "resumePlayback", ResumePlayback);
-		Nan::SetPrototypeMethod(tpl, "stopPlayback", StopPlayback);
-		Nan::SetPrototypeMethod(tpl, "getPosition", GetPosition);
-		Nan::SetPrototypeMethod(tpl, "getDuration", GetDuration);
-		Nan::SetPrototypeMethod(tpl, "seek", Seek);
-		Nan::SetPrototypeMethod(tpl, "isRealTime", IsRealTime);
-		Nan::SetPrototypeMethod(tpl, "setIsRealTime", SetIsRealTime);
-		Nan::SetPrototypeMethod(tpl, "setPlaybackSpeed", SetPlaybackSpeed);
-		Nan::SetPrototypeMethod(tpl, "getCurrentStatus", GetCurrentStatus);
-		Nan::SetPrototypeMethod(tpl, "setStatusChangedCallbackMethodName", SetStatusChangedCallbackMethodName);
-		Nan::SetPrototypeMethod(tpl, "isTm2", IsTm2);
-		Nan::SetPrototypeMethod(tpl, "isPlayback", IsPlayback);
-		Nan::SetPrototypeMethod(tpl, "isRecorder", IsRecorder);
+			// Methods for record or playback
+			InstanceMethod("pauseRecord", &RSDevice::PauseRecord),
+			InstanceMethod("resumeRecord", &RSDevice::ResumeRecord),
+			InstanceMethod("getFileName", &RSDevice::GetFileName),
+			InstanceMethod("pausePlayback", &RSDevice::PausePlayback),
+			InstanceMethod("resumePlayback", &RSDevice::ResumePlayback),
+			InstanceMethod("stopPlayback", &RSDevice::StopPlayback),
+			InstanceMethod("getPosition", &RSDevice::GetPosition),
+			InstanceMethod("getDuration", &RSDevice::GetDuration),
+			InstanceMethod("seek", &RSDevice::Seek),
+			InstanceMethod("isRealTime", &RSDevice::IsRealTime),
+			InstanceMethod("setIsRealTime", &RSDevice::SetIsRealTime),
+			InstanceMethod("setPlaybackSpeed", &RSDevice::SetPlaybackSpeed),
+			InstanceMethod("getCurrentStatus", &RSDevice::GetCurrentStatus),
+			InstanceMethod("setStatusChangedCallbackMethodName", &RSDevice::SetStatusChangedCallbackMethodName),
+			InstanceMethod("isTm2", &RSDevice::IsTm2),
+			InstanceMethod("isPlayback", &RSDevice::IsPlayback),
+			InstanceMethod("isRecorder", &RSDevice::IsRecorder),
 
-		// methods of tm2 device
-		Nan::SetPrototypeMethod(tpl, "enableLoopback", EnableLoopback);
-		Nan::SetPrototypeMethod(tpl, "disableLoopback", DisableLoopback);
-		Nan::SetPrototypeMethod(tpl, "isLoopbackEnabled", IsLoopbackEnabled);
-		Nan::SetPrototypeMethod(tpl, "connectController", ConnectController);
-		Nan::SetPrototypeMethod(tpl, "disconnectController", DisconnectController);
+			// methods of tm2 device
+			InstanceMethod("enableLoopback", &RSDevice::EnableLoopback),
+			InstanceMethod("disableLoopback", &RSDevice::DisableLoopback),
+			InstanceMethod("isLoopbackEnabled", &RSDevice::IsLoopbackEnabled),
+			InstanceMethod("connectController", &RSDevice::ConnectController),
+			InstanceMethod("disconnectController", &RSDevice::DisconnectController),
 
-		constructor_.Reset(tpl->GetFunction());
-		exports->Set(Nan::New("RSDevice").ToLocalChecked(), tpl->GetFunction());
+		  });
+
+		constructor = Napi::Persistent(func);
+		constructor.SuppressDestruct();
+		exports.Set("RSDevice", func);
+
+		return exports;
 	}
 
-	static v8::Local<v8::Object> NewInstance(rs2_device* dev, DeviceType type = kNormalDevice) {
+	static Object NewInstance(rs2_device* dev, DeviceType type = kNormalDevice) {
 		Nan::EscapableHandleScope scope;
 
-		v8::Local<v8::Function> cons   = Nan::New<v8::Function>(constructor_);
+		v8::Local<v8::Function> cons   = Nan::New<v8::Function>(constructor);
 		v8::Local<v8::Context> context = v8::Isolate::GetCurrent()->GetCurrentContext();
 
-		v8::Local<v8::Object> instance = cons->NewInstance(context, 0, nullptr).ToLocalChecked();
+		Object instance = cons->NewInstance(context, 0, nullptr).ToLocalChecked();
 
 		auto me   = Nan::ObjectWrap::Unwrap<RSDevice>(instance);
 		me->dev_  = dev;
@@ -88,7 +98,7 @@ class RSDevice : public Nan::ObjectWrap {
 		dev_ = nullptr;
 	}
 
-	static void New(const Nan::FunctionCallbackInfo<v8::Value>& info) {
+	static void New(const Napi::CallbackInfo& info) {
 		if (info.IsConstructCall()) {
 			RSDevice* obj = new RSDevice();
 			obj->Wrap(info.This());
@@ -96,7 +106,7 @@ class RSDevice : public Nan::ObjectWrap {
 		}
 	}
 
-	static NAN_METHOD(GetCameraInfo) {
+	static Value GetCameraInfo(const Napi::CallbackInfo& info) {
 		info.GetReturnValue().Set(Nan::Undefined());
 		int32_t camera_info = info[0]->IntegerValue();
 		;
@@ -110,13 +120,13 @@ class RSDevice : public Nan::ObjectWrap {
 		info.GetReturnValue().Set(Nan::New(value).ToLocalChecked());
 	}
 
-	static NAN_METHOD(Destroy) {
+	static Value Destroy(const Napi::CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		if (me) { me->DestroyMe(); }
 		info.GetReturnValue().Set(Nan::Undefined());
 	}
 
-	static NAN_METHOD(SupportsCameraInfo) {
+	static Value SupportsCameraInfo(const Napi::CallbackInfo& info) {
 		info.GetReturnValue().Set(Nan::False());
 		int32_t camera_info = info[0]->IntegerValue();
 		auto me				= Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
@@ -128,14 +138,14 @@ class RSDevice : public Nan::ObjectWrap {
 		info.GetReturnValue().Set(Nan::New(on ? true : false));
 	}
 
-	static NAN_METHOD(Reset) {
+	static Value Reset(const Napi::CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		if (!me) return;
 
 		CallNativeFunc(rs2_hardware_reset, &me->error_, me->dev_, &me->error_);
 	}
 
-	static NAN_METHOD(QuerySensors) {
+	static Value QuerySensors(const Napi::CallbackInfo& info) {
 		info.GetReturnValue().Set(Nan::Undefined());
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		if (!me) return;
@@ -156,7 +166,7 @@ class RSDevice : public Nan::ObjectWrap {
 		info.GetReturnValue().Set(array);
 	}
 
-	static NAN_METHOD(TriggerErrorForTest) {
+	static Value TriggerErrorForTest(const Napi::CallbackInfo& info) {
 		info.GetReturnValue().Set(Nan::Undefined());
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		if (!me) return;
@@ -170,7 +180,7 @@ class RSDevice : public Nan::ObjectWrap {
 		CallNativeFunc(rs2_send_and_receive_raw_data, &me->error_, me->dev_, static_cast<void*>(raw_data), 24, &me->error_);
 	}
 
-	static NAN_METHOD(SpawnRecorderDevice) {
+	static Value SpawnRecorderDevice(const Napi::CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		info.GetReturnValue().Set(Nan::Undefined());
 		if (!me) return;
@@ -183,7 +193,7 @@ class RSDevice : public Nan::ObjectWrap {
 		info.GetReturnValue().Set(obj);
 	}
 
-	static NAN_METHOD(PauseRecord) {
+	static Value PauseRecord(const Napi::CallbackInfo& info) {
 		info.GetReturnValue().Set(Nan::Undefined());
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		if (!me) return;
@@ -191,7 +201,7 @@ class RSDevice : public Nan::ObjectWrap {
 		CallNativeFunc(rs2_record_device_pause, &me->error_, me->dev_, &me->error_);
 	}
 
-	static NAN_METHOD(ResumeRecord) {
+	static Value ResumeRecord(const Napi::CallbackInfo& info) {
 		info.GetReturnValue().Set(Nan::Undefined());
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		if (!me) return;
@@ -199,7 +209,7 @@ class RSDevice : public Nan::ObjectWrap {
 		CallNativeFunc(rs2_record_device_resume, &me->error_, me->dev_, &me->error_);
 	}
 
-	static NAN_METHOD(GetFileName) {
+	static Value GetFileName(const Napi::CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		info.GetReturnValue().Set(Nan::Undefined());
 		if (!me) return;
@@ -219,7 +229,7 @@ class RSDevice : public Nan::ObjectWrap {
 		info.GetReturnValue().Set(Nan::New(file).ToLocalChecked());
 	}
 
-	static NAN_METHOD(PausePlayback) {
+	static Value PausePlayback(const Napi::CallbackInfo& info) {
 		info.GetReturnValue().Set(Nan::Undefined());
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		if (!me) return;
@@ -227,7 +237,7 @@ class RSDevice : public Nan::ObjectWrap {
 		CallNativeFunc(rs2_playback_device_pause, &me->error_, me->dev_, &me->error_);
 	}
 
-	static NAN_METHOD(ResumePlayback) {
+	static Value ResumePlayback(const Napi::CallbackInfo& info) {
 		info.GetReturnValue().Set(Nan::Undefined());
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		if (!me) return;
@@ -235,7 +245,7 @@ class RSDevice : public Nan::ObjectWrap {
 		CallNativeFunc(rs2_playback_device_resume, &me->error_, me->dev_, &me->error_);
 	}
 
-	static NAN_METHOD(StopPlayback) {
+	static Value StopPlayback(const Napi::CallbackInfo& info) {
 		info.GetReturnValue().Set(Nan::Undefined());
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		if (!me) return;
@@ -243,7 +253,7 @@ class RSDevice : public Nan::ObjectWrap {
 		CallNativeFunc(rs2_playback_device_stop, &me->error_, me->dev_, &me->error_);
 	}
 
-	static NAN_METHOD(GetPosition) {
+	static Value GetPosition(const Napi::CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		info.GetReturnValue().Set(Nan::Undefined());
 		if (!me) return;
@@ -253,7 +263,7 @@ class RSDevice : public Nan::ObjectWrap {
 		info.GetReturnValue().Set(Nan::New(pos));
 	}
 
-	static NAN_METHOD(GetDuration) {
+	static Value GetDuration(const Napi::CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		info.GetReturnValue().Set(Nan::Undefined());
 		if (!me) return;
@@ -263,7 +273,7 @@ class RSDevice : public Nan::ObjectWrap {
 		info.GetReturnValue().Set(Nan::New(duration));
 	}
 
-	static NAN_METHOD(Seek) {
+	static Value Seek(const Napi::CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		info.GetReturnValue().Set(Nan::Undefined());
 		if (!me) return;
@@ -272,7 +282,7 @@ class RSDevice : public Nan::ObjectWrap {
 		CallNativeFunc(rs2_playback_seek, &me->error_, me->dev_, time * 1000000, &me->error_);
 	}
 
-	static NAN_METHOD(IsRealTime) {
+	static Value IsRealTime(const Napi::CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		info.GetReturnValue().Set(Nan::Undefined());
 		if (!me) return;
@@ -283,7 +293,7 @@ class RSDevice : public Nan::ObjectWrap {
 		info.GetReturnValue().Set(val ? Nan::True() : Nan::False());
 	}
 
-	static NAN_METHOD(SetIsRealTime) {
+	static Value SetIsRealTime(const Napi::CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		info.GetReturnValue().Set(Nan::Undefined());
 		if (!me) return;
@@ -292,7 +302,7 @@ class RSDevice : public Nan::ObjectWrap {
 		CallNativeFunc(rs2_playback_device_set_real_time, &me->error_, me->dev_, val, &me->error_);
 	}
 
-	static NAN_METHOD(SetPlaybackSpeed) {
+	static Value SetPlaybackSpeed(const Napi::CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		info.GetReturnValue().Set(Nan::Undefined());
 		if (!me) return;
@@ -301,7 +311,7 @@ class RSDevice : public Nan::ObjectWrap {
 		CallNativeFunc(rs2_playback_device_set_playback_speed, &me->error_, me->dev_, speed, &me->error_);
 	}
 
-	static NAN_METHOD(IsPlayback) {
+	static Value IsPlayback(const Napi::CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		info.GetReturnValue().Set(Nan::Undefined());
 		if (!me) return;
@@ -310,7 +320,7 @@ class RSDevice : public Nan::ObjectWrap {
 		info.GetReturnValue().Set(val ? Nan::True() : Nan::False());
 	}
 
-	static NAN_METHOD(IsRecorder) {
+	static Value IsRecorder(const Napi::CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		info.GetReturnValue().Set(Nan::Undefined());
 		if (!me) return;
@@ -319,7 +329,7 @@ class RSDevice : public Nan::ObjectWrap {
 		info.GetReturnValue().Set(val ? Nan::True() : Nan::False());
 	}
 
-	static NAN_METHOD(GetCurrentStatus) {
+	static Value GetCurrentStatus(const Napi::CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		info.GetReturnValue().Set(Nan::Undefined());
 		if (!me) return;
@@ -331,7 +341,7 @@ class RSDevice : public Nan::ObjectWrap {
 		info.GetReturnValue().Set(Nan::New(status));
 	}
 
-	static NAN_METHOD(SetStatusChangedCallbackMethodName) {
+	static Value SetStatusChangedCallbackMethodName(const Napi::CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		info.GetReturnValue().Set(Nan::Undefined());
 		if (!me) return;
@@ -346,7 +356,7 @@ class RSDevice : public Nan::ObjectWrap {
 		  &me->error_);
 	}
 
-	static NAN_METHOD(IsTm2) {
+	static Value IsTm2(const Napi::CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		info.GetReturnValue().Set(Nan::Undefined());
 		if (!me) return;
@@ -356,7 +366,7 @@ class RSDevice : public Nan::ObjectWrap {
 		info.GetReturnValue().Set(val ? Nan::True() : Nan::False());
 	}
 
-	static NAN_METHOD(EnableLoopback) {
+	static Value EnableLoopback(const Napi::CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		info.GetReturnValue().Set(Nan::Undefined());
 		if (!me) return;
@@ -365,7 +375,7 @@ class RSDevice : public Nan::ObjectWrap {
 		CallNativeFunc(rs2_loopback_enable, &me->error_, me->dev_, *file, &me->error_);
 	}
 
-	static NAN_METHOD(DisableLoopback) {
+	static Value DisableLoopback(const Napi::CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		info.GetReturnValue().Set(Nan::Undefined());
 		if (!me) return;
@@ -373,7 +383,7 @@ class RSDevice : public Nan::ObjectWrap {
 		CallNativeFunc(rs2_loopback_disable, &me->error_, me->dev_, &me->error_);
 	}
 
-	static NAN_METHOD(IsLoopbackEnabled) {
+	static Value IsLoopbackEnabled(const Napi::CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		info.GetReturnValue().Set(Nan::Undefined());
 		if (!me) return;
@@ -382,7 +392,7 @@ class RSDevice : public Nan::ObjectWrap {
 		info.GetReturnValue().Set(val ? Nan::True() : Nan::False());
 	}
 
-	static NAN_METHOD(ConnectController) {
+	static Value ConnectController(const Napi::CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		info.GetReturnValue().Set(Nan::Undefined());
 		if (!me) return;
@@ -392,7 +402,7 @@ class RSDevice : public Nan::ObjectWrap {
 		CallNativeFunc(rs2_connect_tm2_controller, &me->error_, me->dev_, static_cast<const uint8_t*>(contents.Data()), &me->error_);
 	}
 
-	static NAN_METHOD(DisconnectController) {
+	static Value DisconnectController(const Napi::CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSDevice>(info.Holder());
 		info.GetReturnValue().Set(Nan::Undefined());
 		if (!me) return;
@@ -413,7 +423,7 @@ class RSDevice : public Nan::ObjectWrap {
 
 		return (error_ || !val) ? false : true;
 	}
-	static Nan::Persistent<v8::Function> constructor_;
+	static FunctionReference constructor;
 	rs2_device* dev_;
 	rs2_error* error_;
 	DeviceType type_;
@@ -427,6 +437,5 @@ class RSDevice : public Nan::ObjectWrap {
 	friend class PlaybackStatusCallbackInfo;
 };
 
-Nan::Persistent<v8::Function> RSDevice::constructor_;
 
 #endif
