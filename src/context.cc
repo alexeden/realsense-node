@@ -2,54 +2,65 @@
 #define CONTEXT_H
 
 #include <napi.h>
+#include <librealsense2/h/rs_internal.h>
+#include <librealsense2/hpp/rs_types.hpp>
+#include <librealsense2/rs.h>
+#include "main_thread_callback.cc"
+#include "utils.cc"
 
-class RSContext : public Nan::ObjectWrap {
+using namespace Napi;
+
+Napi::FunctionReference RSContext::constructor;
+
+class RSContext : public ObjectWrap<RSContext> {
   public:
 	enum ContextType {
 		kNormal = 0,
 		kRecording,
 		kPlayback,
 	};
-	static void Init(v8::Local<v8::Object> exports) {
-		v8::Local<v8::FunctionTemplate> tpl = Nan::New<v8::FunctionTemplate>(New);
-		tpl->SetClassName(Nan::New("RSContext").ToLocalChecked());
-		tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
-		Nan::SetPrototypeMethod(tpl, "destroy", Destroy);
-		Nan::SetPrototypeMethod(tpl, "create", Create);
-		Nan::SetPrototypeMethod(tpl, "queryDevices", QueryDevices);
-		Nan::SetPrototypeMethod(tpl, "setDevicesChangedCallback", SetDevicesChangedCallback);
-		Nan::SetPrototypeMethod(tpl, "loadDeviceFile", LoadDeviceFile);
-		Nan::SetPrototypeMethod(tpl, "unloadDeviceFile", UnloadDeviceFile);
-		Nan::SetPrototypeMethod(tpl, "createDeviceFromSensor", CreateDeviceFromSensor);
+	static Object Init(Napi::Env env, Object exports) {
+		Napi::Function func = DefineClass(
+		  env,
+		  "RSContext",
+		  {
+			InstanceMethod("destroy", &RSContext::Destroy),
+			InstanceMethod("create", &RSContext::Create),
+			InstanceMethod("queryDevices", &RSContext::QueryDevices),
+			InstanceMethod("setDevicesChangedCallback", &RSContext::SetDevicesChangedCallback),
+			InstanceMethod("loadDeviceFile", &RSContext::LoadDeviceFile),
+			InstanceMethod("unloadDeviceFile", &RSContext::UnloadDeviceFile),
+			InstanceMethod("createDeviceFromSensor", &RSContext::CreateDeviceFromSensor),
 
-		constructor_.Reset(tpl->GetFunction());
-		exports->Set(Nan::New("RSContext").ToLocalChecked(), tpl->GetFunction());
+		  });
+
+
+		constructor = Napi::Persistent(func);
+		constructor.SuppressDestruct();
+		exports.Set("RSDevice", func);
+
+		return exports;
 	}
 
-	static v8::Local<v8::Object> NewInstance(rs2_context* ctx_ptr = nullptr) {
-		Nan::EscapableHandleScope scope;
-
-		v8::Local<v8::Function> cons   = Nan::New<v8::Function>(constructor_);
-		v8::Local<v8::Context> context = v8::Isolate::GetCurrent()->GetCurrentContext();
-
-		v8::Local<v8::Object> instance = cons->NewInstance(context, 0, nullptr).ToLocalChecked();
+	static Object NewInstance(Napi::Env env, rs2_context* ctx_ptr = nullptr) {
+		EscapableHandleScope scope(env);
+		Object instance = constructor.New({ });
 
 		// If ctx_ptr is provided, no need to call create.
-		if (ctx_ptr) {
-			auto me  = Nan::ObjectWrap::Unwrap<RSContext>(instance);
-			me->ctx_ = ctx_ptr;
-		}
-		return scope.Escape(instance);
+		// if (ctx_ptr) {
+		// 	this->ctx_ = ctx_ptr;
+		// }
+		return scope.Escape(napi_value(instance)).ToObject();
 	}
 
-  private:
-	explicit RSContext(ContextType type = kNormal)
+	RSContext(ContextType type = kNormal)
 	  : ctx_(nullptr)
 	  , error_(nullptr)
 	  , type_(type)
 	  , mode_(RS2_RECORDING_MODE_BLANK_FRAMES) {
 	}
+  private:
 
 	~RSContext() {
 		DestroyMe();
@@ -64,13 +75,12 @@ class RSContext : public Nan::ObjectWrap {
 		ctx_ = nullptr;
 	}
 
-	static void New(const Nan::FunctionCallbackInfo<v8::Value>& info) {
+	static Napi::Value New(const CallbackInfo& info) {
 		if (!info.IsConstructCall()) return;
 
 		ContextType type = kNormal;
 		if (info.Length()) {
-			v8::String::Utf8Value type_str(info[0]->ToString());
-			std::string std_type_str(*type_str);
+			std::string std_type_str = info[0].As<String>().ToString();
 			if (!std_type_str.compare("recording"))
 				type = kRecording;
 			else if (!std_type_str.compare("playback"))
@@ -78,115 +88,90 @@ class RSContext : public Nan::ObjectWrap {
 		}
 		RSContext* obj = new RSContext(type);
 		if (type == kRecording || type == kPlayback) {
-			v8::String::Utf8Value file(info[1]->ToString());
-			v8::String::Utf8Value section(info[2]->ToString());
-			obj->file_name_ = std::string(*file);
-			obj->section_   = std::string(*section);
+			std::string file = info[1].As<String>().ToString();
+			std::string section = info[2].As<String>().ToString();
+			obj->file_name_ = file;
+			obj->section_   = section;
 		}
-		if (type == kRecording) obj->mode_ = static_cast<rs2_recording_mode>(info[3]->IntegerValue());
-		obj->Wrap(info.This());
-		info.GetReturnValue().Set(info.This());
+		if (type == kRecording)
+			obj->mode_ = static_cast<rs2_recording_mode>(info[3].As<Number>().ToNumber().Uint32Value());
+
+		return info.This();
 	}
 
-	static NAN_METHOD(Create) {
+	Napi::Value Create(const CallbackInfo& info) {
 		MainThreadCallback::Init();
-		info.GetReturnValue().Set(Nan::Undefined());
-		auto me = Nan::ObjectWrap::Unwrap<RSContext>(info.Holder());
-		if (!me) return;
 
-		switch (me->type_) {
+		switch (this->type_) {
 			case kRecording:
-				me->ctx_ = GetNativeResult<rs2_context*>(
+				this->ctx_ = GetNativeResult<rs2_context*>(
 				  rs2_create_recording_context,
-				  &me->error_,
+				  &this->error_,
 				  RS2_API_VERSION,
-				  me->file_name_.c_str(),
-				  me->section_.c_str(),
-				  me->mode_,
-				  &me->error_);
+				  this->file_name_.c_str(),
+				  this->section_.c_str(),
+				  this->mode_,
+				  &this->error_);
 				break;
 			case kPlayback:
-				me->ctx_ = GetNativeResult<rs2_context*>(
+				this->ctx_ = GetNativeResult<rs2_context*>(
 				  rs2_create_mock_context,
-				  &me->error_,
+				  &this->error_,
 				  RS2_API_VERSION,
-				  me->file_name_.c_str(),
-				  me->section_.c_str(),
-				  &me->error_);
+				  this->file_name_.c_str(),
+				  this->section_.c_str(),
+				  &this->error_);
 				break;
 			default:
-				me->ctx_ = GetNativeResult<rs2_context*>(rs2_create_context, &me->error_, RS2_API_VERSION, &me->error_);
+				this->ctx_ = GetNativeResult<rs2_context*>(rs2_create_context, &this->error_, RS2_API_VERSION, &this->error_);
 				break;
 		}
 	}
 
-	static NAN_METHOD(Destroy) {
-		auto me = Nan::ObjectWrap::Unwrap<RSContext>(info.Holder());
-		if (me) { me->DestroyMe(); }
-		info.GetReturnValue().Set(Nan::Undefined());
+	Napi::Value Destroy(const CallbackInfo& info) {
+		this->DestroyMe();
+		return info.Env().Undefined();
 	}
 
-	static NAN_METHOD(SetDevicesChangedCallback) {
-		auto me = Nan::ObjectWrap::Unwrap<RSContext>(info.Holder());
-		if (me) {
-			v8::String::Utf8Value value(info[0]->ToString());
-			me->device_changed_callback_name_ = std::string(*value);
-			me->RegisterDevicesChangedCallbackMethod();
-		}
-		info.GetReturnValue().Set(Nan::Undefined());
+	Napi::Value SetDevicesChangedCallback(const CallbackInfo& info) {
+		this->device_changed_callback_name_ = info[0].As<String>().ToString();
+		this->RegisterDevicesChangedCallbackMethod();
+
+		return info.This();
 	}
 
-	static NAN_METHOD(LoadDeviceFile) {
-		info.GetReturnValue().Set(Nan::Undefined());
-		auto me = Nan::ObjectWrap::Unwrap<RSContext>(info.Holder());
-		if (!me) return;
-
-		auto device_file = info[0]->ToString();
-		v8::String::Utf8Value value(device_file);
-		auto dev = GetNativeResult<rs2_device*>(rs2_context_add_device, &me->error_, me->ctx_, *value, &me->error_);
+	Napi::Value LoadDeviceFile(const CallbackInfo& info) {
+		std::string device_file = info[0].As<String>().ToString();
+		auto dev = GetNativeResult<rs2_device*>(rs2_context_add_device, &this->error_, this->ctx_, device_file, &this->error_);
 		if (!dev) return;
 
 		auto jsobj = RSDevice::NewInstance(dev, RSDevice::kPlaybackDevice);
-		info.GetReturnValue().Set(jsobj);
+		return jsobj;
 	}
 
-	static NAN_METHOD(UnloadDeviceFile) {
-		auto me = Nan::ObjectWrap::Unwrap<RSContext>(info.Holder());
-		info.GetReturnValue().Set(Nan::Undefined());
-		if (!me) return;
-
-		auto device_file = info[0]->ToString();
-		v8::String::Utf8Value value(device_file);
-		CallNativeFunc(rs2_context_remove_device, &me->error_, me->ctx_, *value, &me->error_);
+	Napi::Value UnloadDeviceFile(const CallbackInfo& info) {
+		std::string device_file = info[0].As<String>().ToString();
+		CallNativeFunc(rs2_context_remove_device, &this->error_, this->ctx_, device_file, &this->error_);
 	}
 
-	static NAN_METHOD(CreateDeviceFromSensor) {
-		info.GetReturnValue().Set(Nan::Undefined());
-		auto sensor = Nan::ObjectWrap::Unwrap<RSSensor>(info[0]->ToObject());
-		if (!sensor) return;
+	Napi::Value CreateDeviceFromSensor(const CallbackInfo& info) {
+		auto sensor = info[0].As<RSSensor>();
 
 		rs2_error* error = nullptr;
 		auto dev		 = GetNativeResult<rs2_device*>(rs2_create_device_from_sensor, &error, sensor->sensor_, &error);
 		if (!dev) return;
 
-		auto jsobj = RSDevice::NewInstance(dev);
-		info.GetReturnValue().Set(jsobj);
+		return RSDevice::NewInstance(dev);
 	}
 
-	static NAN_METHOD(QueryDevices) {
-		info.GetReturnValue().Set(Nan::Undefined());
-		auto me = Nan::ObjectWrap::Unwrap<RSContext>(info.Holder());
-		if (!me) return;
+	Napi::Value QueryDevices(const CallbackInfo& info) {
+		auto dev_list = GetNativeResult<rs2_device_list*>(rs2_query_devices, &this->error_, this->ctx_, &this->error_);
 
-		auto dev_list = GetNativeResult<rs2_device_list*>(rs2_query_devices, &me->error_, me->ctx_, &me->error_);
-		if (!dev_list) return;
-
-		auto jsobj = RSDeviceList::NewInstance(dev_list);
-		info.GetReturnValue().Set(jsobj);
+		return RSDeviceList::NewInstance(dev_list);
 	}
 
   private:
-	static Nan::Persistent<v8::Function> constructor_;
+	static FunctionReference constructor;
 
 	rs2_context* ctx_;
 	rs2_error* error_;
@@ -199,7 +184,5 @@ class RSContext : public Nan::ObjectWrap {
 	friend class RSPipeline;
 	friend class RSDeviceHub;
 };
-
-Nan::Persistent<v8::Function> RSContext::constructor_;
 
 #endif
