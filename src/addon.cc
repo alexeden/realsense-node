@@ -7,9 +7,14 @@
 
 #include "dict_base.cc"
 #include "error_util.cc"
+#include "main_thread_callback.cc"
 
 // using namespace std;
 using namespace Napi;
+
+Value GetError(const CallbackInfo& info) {
+	return ErrorUtil::GetJSErrorObject(info.Env());
+}
 
 Value GetTime(const CallbackInfo& info) {
 	rs2_error* e = nullptr;
@@ -26,6 +31,7 @@ Value RegisterErrorCallback(const CallbackInfo& info) {
 
 
 Object Init(Env env, Object exports) {
+	exports.Set("getError", Function::New(env, GetError));
 	exports.Set("getTime", Function::New(env, GetTime));
 	exports.Set("registerErrorCallback", Function::New(env, RegisterErrorCallback));
 	return exports;
