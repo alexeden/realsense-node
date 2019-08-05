@@ -2,38 +2,48 @@
 #define DEVICE_LIST_H
 
 #include <napi.h>
+// #include <librealsense2/h/rs_internal.h>
+#include <librealsense2/hpp/rs_types.hpp>
+// #include <librealsense2/rs.h>
+#include "device.cc"
+
 
 using namespace Napi;
 
-class RSDeviceList : public ObjectWrap<RSDeviceList> {
+class RSDeviceList : ObjectWrap<RSDeviceList> {
   public:
-	static void Init(v8::Local<v8::Object> exports) {
-		v8::Local<v8::FunctionTemplate> tpl = Nan::New<v8::FunctionTemplate>(New);
-		tpl->SetClassName(Nan::New("RSDeviceList").ToLocalChecked());
-		tpl->InstanceTemplate()->SetInternalFieldCount(1);
+	static Object Init(Napi::Env env, Object exports) {
+		Napi::Function func = DefineClass(
+		  env,
+		  "RSDeviceList",
+		  {
+			InstanceMethod("destroy", &RSDeviceList::Destroy),
+			InstanceMethod("contains", &RSDeviceList::Contains),
+			InstanceMethod("size", &RSDeviceList::Size),
+			InstanceMethod("getDevice", &RSDeviceList::GetDevice),
+		  });
 
-		Nan::SetPrototypeMethod(tpl, "destroy", Destroy);
-		Nan::SetPrototypeMethod(tpl, "contains", Contains);
-		Nan::SetPrototypeMethod(tpl, "size", Size);
-		Nan::SetPrototypeMethod(tpl, "getDevice", GetDevice);
+		constructor = Napi::Persistent(func);
+		constructor.SuppressDestruct();
+		exports.Set("RSDeviceList", func);
 
-		constructor_.Reset(tpl->GetFunction());
-		exports->Set(Nan::New("RSDeviceList").ToLocalChecked(), tpl->GetFunction());
+		return exports;
 	}
 
-	static v8::Local<v8::Object> NewInstance(rs2_device_list* list) {
+	static Object NewInstance(rs2_device_list* list) {
 		Nan::EscapableHandleScope scope;
-		v8::Local<v8::Function> cons   = Nan::New<v8::Function>(constructor_);
+		v8::Local<v8::Function> cons   = Nan::New<v8::Function>(constructor);
 		v8::Local<v8::Context> context = v8::Isolate::GetCurrent()->GetCurrentContext();
-		v8::Local<v8::Object> instance = cons->NewInstance(context, 0, nullptr).ToLocalChecked();
-		auto me						   = Nan::ObjectWrap::Unwrap<RSDeviceList>(instance);
+		Object instance				   = cons->NewInstance(context, 0, nullptr).ToLocalChecked();
+		auto me						   = ObjectWrap<RSDeviceList>::Unwrap(instance);
 		me->list_					   = list;
 		return scope.Escape(instance);
 	}
 
   private:
-	RSDeviceList()
-	  : error_(nullptr)
+	RSDeviceList(const CallbackInfo& info)
+	  : ObjectWrap<RSDeviceList>(info)
+	  , error_(nullptr)
 	  , list_(nullptr) {
 	}
 
@@ -48,62 +58,38 @@ class RSDeviceList : public ObjectWrap<RSDeviceList> {
 		list_ = nullptr;
 	}
 
-	static void New(const Nan::FunctionCallbackInfo<v8::Value>& info) {
-		if (info.IsConstructCall()) {
-			RSDeviceList* obj = new RSDeviceList();
-			obj->Wrap(info.This());
-			info.GetReturnValue().Set(info.This());
-		}
+	Napi::Value Destroy(const CallbackInfo& info) {
+		this->DestroyMe();
+		return info.Env().Undefined();
 	}
 
-	static NAN_METHOD(Destroy) {
-		auto me = Nan::ObjectWrap::Unwrap<RSDeviceList>(info.Holder());
-		if (me) me->DestroyMe();
+	Napi::Value Contains(const CallbackInfo& info) {
+		auto dev = ObjectWrap<RSDevice>::Unwrap(info[0].As<Object>());
+		bool contains = GetNativeResult<int>(rs2_device_list_contains, &this->error_, this->list_, dev->dev_, &this->error_);
+		if (this->error_) return;
 
-		info.GetReturnValue().Set(Nan::Undefined());
+		return Boolean::New(info.Env(), contains);
 	}
 
-	static NAN_METHOD(Contains) {
-		info.GetReturnValue().Set(Nan::Undefined());
-		auto me  = Nan::ObjectWrap::Unwrap<RSDeviceList>(info.Holder());
-		auto dev = Nan::ObjectWrap::Unwrap<RSDevice>(info[0]->ToObject());
-		if (!me && dev) return;
-
-		bool contains = GetNativeResult<int>(rs2_device_list_contains, &me->error_, me->list_, dev->dev_, &me->error_);
-		if (me->error_) return;
-
-		info.GetReturnValue().Set(Nan::New(contains));
+	Napi::Value Size(const CallbackInfo& info) {
+		auto cnt = GetNativeResult<int>(rs2_get_device_count, &this->error_, this->list_, &this->error_);
+		return Number::New(info.Env(), cnt);
 	}
 
-	static NAN_METHOD(Size) {
-		info.GetReturnValue().Set(Nan::Undefined());
-		auto me = Nan::ObjectWrap::Unwrap<RSDeviceList>(info.Holder());
-		if (!me) return;
+	Napi::Value GetDevice(const CallbackInfo& info) {
+		auto index = info[0].As<Number>().ToNumber().Uint32Value();
 
-		auto cnt = GetNativeResult<int>(rs2_get_device_count, &me->error_, me->list_, &me->error_);
-		if (me->error_) return;
+		auto dev = GetNativeResult<rs2_device*>(rs2_create_device, &this->error_, this->list_, index, &this->error_);
 
-		info.GetReturnValue().Set(Nan::New(cnt));
-	}
-
-	static NAN_METHOD(GetDevice) {
-		info.GetReturnValue().Set(Nan::Undefined());
-		auto me	= Nan::ObjectWrap::Unwrap<RSDeviceList>(info.Holder());
-		auto index = info[0]->IntegerValue();
-		if (!me) return;
-
-		auto dev = GetNativeResult<rs2_device*>(rs2_create_device, &me->error_, me->list_, index, &me->error_);
-		if (!dev) return;
-
-		info.GetReturnValue().Set(RSDevice::NewInstance(dev));
+		return RSDevice::NewInstance(dev);
 	}
 
   private:
-	static Nan::Persistent<v8::Function> constructor_;
+	static FunctionReference constructor;
 	rs2_error* error_;
 	rs2_device_list* list_;
 };
 
-Nan::Persistent<v8::Function> RSDeviceList::constructor_;
+Napi::FunctionReference RSDeviceList::constructor;
 
 #endif

@@ -1,16 +1,15 @@
 #ifndef CONTEXT_H
 #define CONTEXT_H
 
-#include <napi.h>
+#include "main_thread_callback.cc"
+#include "sensor.cc"
+#include "utils.cc"
 #include <librealsense2/h/rs_internal.h>
 #include <librealsense2/hpp/rs_types.hpp>
 #include <librealsense2/rs.h>
-#include "main_thread_callback.cc"
-#include "utils.cc"
+#include <napi.h>
 
 using namespace Napi;
-
-Napi::FunctionReference RSContext::constructor;
 
 class RSContext : public ObjectWrap<RSContext> {
   public:
@@ -35,7 +34,6 @@ class RSContext : public ObjectWrap<RSContext> {
 
 		  });
 
-
 		constructor = Napi::Persistent(func);
 		constructor.SuppressDestruct();
 		exports.Set("RSDevice", func);
@@ -45,7 +43,7 @@ class RSContext : public ObjectWrap<RSContext> {
 
 	static Object NewInstance(Napi::Env env, rs2_context* ctx_ptr = nullptr) {
 		EscapableHandleScope scope(env);
-		Object instance = constructor.New({ });
+		Object instance = constructor.New({});
 
 		// If ctx_ptr is provided, no need to call create.
 		// if (ctx_ptr) {
@@ -54,18 +52,37 @@ class RSContext : public ObjectWrap<RSContext> {
 		return scope.Escape(napi_value(instance)).ToObject();
 	}
 
-	RSContext(ContextType type = kNormal)
-	  : ctx_(nullptr)
+	RSContext(const CallbackInfo& info)
+	  // RSContext(ContextType type = kNormal)
+	  : ObjectWrap<RSContext>(info)
+	  , ctx_(nullptr)
 	  , error_(nullptr)
-	  , type_(type)
 	  , mode_(RS2_RECORDING_MODE_BLANK_FRAMES) {
+		this->type_ = info[0].IsNumber() ? info[0].As<ContextType>() : kNormal;
+
+		ContextType type = kNormal;
+		if (info.Length()) {
+			std::string std_type_str = info[0].As<String>().ToString();
+			if (!std_type_str.compare("recording"))
+				this->type_ = kRecording;
+			else if (!std_type_str.compare("playback"))
+				this->type_ = kPlayback;
+		}
+		if (type == kRecording || type == kPlayback) {
+			std::string file	= info[1].As<String>().ToString();
+			std::string section = info[2].As<String>().ToString();
+			this->file_name_	= file;
+			this->section_		= section;
+		}
+		if (type == kRecording)
+			this->mode_ = static_cast<rs2_recording_mode>(info[3].As<Number>().ToNumber().Uint32Value());
 	}
-  private:
 
 	~RSContext() {
 		DestroyMe();
 	}
 
+  private:
 	void RegisterDevicesChangedCallbackMethod();
 
 	void DestroyMe() {
@@ -73,30 +90,6 @@ class RSContext : public ObjectWrap<RSContext> {
 		error_ = nullptr;
 		if (ctx_) rs2_delete_context(ctx_);
 		ctx_ = nullptr;
-	}
-
-	static Napi::Value New(const CallbackInfo& info) {
-		if (!info.IsConstructCall()) return;
-
-		ContextType type = kNormal;
-		if (info.Length()) {
-			std::string std_type_str = info[0].As<String>().ToString();
-			if (!std_type_str.compare("recording"))
-				type = kRecording;
-			else if (!std_type_str.compare("playback"))
-				type = kPlayback;
-		}
-		RSContext* obj = new RSContext(type);
-		if (type == kRecording || type == kPlayback) {
-			std::string file = info[1].As<String>().ToString();
-			std::string section = info[2].As<String>().ToString();
-			obj->file_name_ = file;
-			obj->section_   = section;
-		}
-		if (type == kRecording)
-			obj->mode_ = static_cast<rs2_recording_mode>(info[3].As<Number>().ToNumber().Uint32Value());
-
-		return info.This();
 	}
 
 	Napi::Value Create(const CallbackInfo& info) {
@@ -123,7 +116,8 @@ class RSContext : public ObjectWrap<RSContext> {
 				  &this->error_);
 				break;
 			default:
-				this->ctx_ = GetNativeResult<rs2_context*>(rs2_create_context, &this->error_, RS2_API_VERSION, &this->error_);
+				this->ctx_
+				  = GetNativeResult<rs2_context*>(rs2_create_context, &this->error_, RS2_API_VERSION, &this->error_);
 				break;
 		}
 	}
@@ -142,7 +136,8 @@ class RSContext : public ObjectWrap<RSContext> {
 
 	Napi::Value LoadDeviceFile(const CallbackInfo& info) {
 		std::string device_file = info[0].As<String>().ToString();
-		auto dev = GetNativeResult<rs2_device*>(rs2_context_add_device, &this->error_, this->ctx_, device_file, &this->error_);
+		auto dev
+		  = GetNativeResult<rs2_device*>(rs2_context_add_device, &this->error_, this->ctx_, device_file, &this->error_);
 		if (!dev) return;
 
 		auto jsobj = RSDevice::NewInstance(dev, RSDevice::kPlaybackDevice);
@@ -155,7 +150,7 @@ class RSContext : public ObjectWrap<RSContext> {
 	}
 
 	Napi::Value CreateDeviceFromSensor(const CallbackInfo& info) {
-		auto sensor = info[0].As<RSSensor>();
+		auto sensor = ObjectWrap<RSSensor>::Unwrap(info[0].As<Object>());
 
 		rs2_error* error = nullptr;
 		auto dev		 = GetNativeResult<rs2_device*>(rs2_create_device_from_sensor, &error, sensor->sensor_, &error);
@@ -184,5 +179,7 @@ class RSContext : public ObjectWrap<RSContext> {
 	friend class RSPipeline;
 	friend class RSDeviceHub;
 };
+
+Napi::FunctionReference RSContext::constructor;
 
 #endif

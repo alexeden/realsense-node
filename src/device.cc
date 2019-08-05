@@ -2,15 +2,15 @@
 #define DEVICE_H
 
 #include "main_thread_callback.cc"
+#include "sensor.cc"
 #include "utils.cc"
 #include <librealsense2/hpp/rs_types.hpp>
 #include <napi.h>
 
 using namespace Napi;
 
-FunctionReference RSDevice::constructor;
 
-class RSDevice : public ObjectWrap<RSDevice> {
+class RSDevice : public Napi::ObjectWrap<RSDevice> {
   public:
 	enum DeviceType {
 		kNormalDevice = 0,
@@ -29,7 +29,7 @@ class RSDevice : public ObjectWrap<RSDevice> {
 			InstanceMethod("reset", &RSDevice::Reset),
 			InstanceMethod("querySensors", &RSDevice::QuerySensors),
 			InstanceMethod("triggerErrorForTest", &RSDevice::TriggerErrorForTest),
-			InstanceMethod("spawnRecorderDevice", &RSDevice::SpawnRecorderDevice),
+			// InstanceMethod("spawnRecorderDevice", &RSDevice::SpawnRecorderDevice),
 
 			// Methods for record or playback
 			InstanceMethod("pauseRecord", &RSDevice::PauseRecord),
@@ -66,44 +66,38 @@ class RSDevice : public ObjectWrap<RSDevice> {
 		return exports;
 	}
 
-	static Object NewInstance(rs2_device* dev, DeviceType type = kNormalDevice) {
-		Nan::EscapableHandleScope scope;
+	// static Object NewInstance(rs2_device* dev, DeviceType type = kNormalDevice) {
+	// 	Nan::EscapableHandleScope scope;
 
-		v8::Local<v8::Function> cons   = Nan::New<v8::Function>(constructor);
-		v8::Local<v8::Context> context = v8::Isolate::GetCurrent()->GetCurrentContext();
+	// 	v8::Local<v8::Function> cons   = Nan::New<v8::Function>(constructor);
+	// 	v8::Local<v8::Context> context = v8::Isolate::GetCurrent()->GetCurrentContext();
 
-		Object instance = cons->NewInstance(context, 0, nullptr).ToLocalChecked();
+	// 	Object instance = cons->NewInstance(context, 0, nullptr).ToLocalChecked();
 
-		me->dev_  = dev;
-		me->type_ = type;
+	// 	me->dev_  = dev;
+	// 	me->type_ = type;
 
-		return scope.Escape(instance);
-	}
+	// 	return scope.Escape(instance);
+	// }
 
-  private:
-	explicit RSDevice(DeviceType type = kNormalDevice)
-	  : dev_(nullptr)
-	  , error_(nullptr)
-	  , type_(type) {
+	// explicit RSDevice(DeviceType type = kNormalDevice)
+	RSDevice(const CallbackInfo& info)
+	  : Napi::ObjectWrap<RSDevice>(info)
+	  , dev_(nullptr)
+	  , error_(nullptr) {
+		type_ = info[0].As<DeviceType>();
 	}
 
 	~RSDevice() {
 		DestroyMe();
 	}
 
+  private:
 	void DestroyMe() {
 		if (error_) rs2_free_error(error_);
 		error_ = nullptr;
 		if (dev_) rs2_delete_device(dev_);
 		dev_ = nullptr;
-	}
-
-	void New(const Napi::CallbackInfo& info) {
-		if (info.IsConstructCall()) {
-			RSDevice* obj = new RSDevice();
-			obj->Wrap(info.This());
-			return info.This();
-		}
 	}
 
 	Napi::Value GetCameraInfo(const Napi::CallbackInfo& info) {
@@ -113,7 +107,7 @@ class RSDevice : public ObjectWrap<RSDevice> {
 		  const char*>(rs2_get_device_info, &this->error_, this->dev_, static_cast<rs2_camera_info>(camera_info), &this->error_);
 		if (this->error_) return;
 
-		return String::New(value);
+		return String::New(info.Env(), value);
 	}
 
 	Napi::Value Destroy(const Napi::CallbackInfo& info) {
@@ -123,8 +117,8 @@ class RSDevice : public ObjectWrap<RSDevice> {
 
 	Napi::Value SupportsCameraInfo(const Napi::CallbackInfo& info) {
 		int32_t camera_info = info[0].As<Number>().Int32Value();
-		int32_t on = GetNativeResult<
-		  int>(rs2_supports_device_info, &this->error_, this->dev_, (rs2_camera_info) camera_info, &this->error_);
+		int32_t on			= GetNativeResult<
+		   int>(rs2_supports_device_info, &this->error_, this->dev_, (rs2_camera_info) camera_info, &this->error_);
 		if (this->error_) return;
 
 		return on ? Boolean::New(info.Env(), true) : Boolean::New(info.Env(), false);
@@ -154,7 +148,6 @@ class RSDevice : public ObjectWrap<RSDevice> {
 	}
 
 	Napi::Value TriggerErrorForTest(const Napi::CallbackInfo& info) {
-
 		uint8_t raw_data[24] = { 0 };
 		raw_data[0]			 = 0x14;
 		raw_data[2]			 = 0xab;
@@ -164,13 +157,14 @@ class RSDevice : public ObjectWrap<RSDevice> {
 		CallNativeFunc(rs2_send_and_receive_raw_data, &this->error_, this->dev_, static_cast<void*>(raw_data), 24, &this->error_);
 	}
 
-	Napi::Value SpawnRecorderDevice(const Napi::CallbackInfo& info) {
-		std::string file = info[0].As<String>().ToString();
-		auto dev = GetNativeResult<rs2_device*>(rs2_create_record_device, &this->error_, this->dev_, file, &this->error_);
-		if (this->error_) return;
+	// Napi::Value SpawnRecorderDevice(const Napi::CallbackInfo& info) {
+	// 	std::string file = info[0].As<String>().ToString();
+	// 	auto dev
+	// 	  = GetNativeResult<rs2_device*>(rs2_create_record_device, &this->error_, this->dev_, file, &this->error_);
+	// 	if (this->error_) return;
 
-		return RSDevice::NewInstance(dev, kRecorderDevice);
-	}
+	// 	return RSDevice::NewInstance(dev, kRecorderDevice);
+	// }
 
 	Napi::Value PauseRecord(const Napi::CallbackInfo& info) {
 		CallNativeFunc(rs2_record_device_pause, &this->error_, this->dev_, &this->error_);
@@ -347,5 +341,7 @@ class RSDevice : public ObjectWrap<RSDevice> {
 	friend class RSDeviceHub;
 	friend class PlaybackStatusCallbackInfo;
 };
+
+FunctionReference RSDevice::constructor;
 
 #endif
