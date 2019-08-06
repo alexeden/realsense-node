@@ -8,7 +8,7 @@ console.log('Querying for devices...');
 const deviceList = ctx.queryDevices()
 console.log('Got device list');
 console.log('Getting device count...')
-console.log(deviceList.size());
+console.log(deviceList.length());
 
 addon.cleanup();
 console.log('Done!');

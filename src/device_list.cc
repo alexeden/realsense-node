@@ -19,7 +19,7 @@ class RSDeviceList : public ObjectWrap<RSDeviceList> {
 		  {
 			InstanceMethod("destroy", &RSDeviceList::Destroy),
 			InstanceMethod("contains", &RSDeviceList::Contains),
-			InstanceMethod("size", &RSDeviceList::Size),
+			InstanceMethod("length", &RSDeviceList::Length),
 			InstanceMethod("getDevice", &RSDeviceList::GetDevice),
 		  });
 
@@ -72,7 +72,7 @@ class RSDeviceList : public ObjectWrap<RSDeviceList> {
 		return Boolean::New(info.Env(), contains);
 	}
 
-	Napi::Value Size(const CallbackInfo& info) {
+	Napi::Value Length(const CallbackInfo& info) {
 		auto cnt = GetNativeResult<int>(rs2_get_device_count, &this->error_, this->list_, &this->error_);
 		return Number::New(info.Env(), cnt);
 	}
