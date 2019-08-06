@@ -1,11 +1,21 @@
 #ifndef SENSOR_H
 #define SENSOR_H
 
+#include <iostream>
+#include <librealsense2/hpp/rs_types.hpp>
+#include <napi.h>
+#include "main_thread_callback.cc"
+#include "options.cc"
+#include "utils.cc"
+
+using namespace Napi;
+
+
 class RSSensor
-  : public Nan::ObjectWrap
+  : public ObjectWrap<RSSensor>
   , Options {
   public:
-	static void Init(v8::Local<v8::Object> exports) {
+	static void Init(Object exports) {
 		v8::Local<v8::FunctionTemplate> tpl = Nan::New<v8::FunctionTemplate>(New);
 		tpl->SetClassName(Nan::New("RSSensor").ToLocalChecked());
 		tpl->InstanceTemplate()->SetInternalFieldCount(1);
@@ -33,20 +43,20 @@ class RSSensor
 		Nan::SetPrototypeMethod(tpl, "getDepthScale", GetDepthScale);
 		Nan::SetPrototypeMethod(tpl, "isDepthSensor", IsDepthSensor);
 		Nan::SetPrototypeMethod(tpl, "isROISensor", IsROISensor);
-		constructor_.Reset(tpl->GetFunction());
+		constructor.Reset(tpl->GetFunction());
 		exports->Set(Nan::New("RSSensor").ToLocalChecked(), tpl->GetFunction());
 	}
 
-	static v8::Local<v8::Object> NewInstance(rs2_sensor* sensor) {
+	static Object NewInstance(rs2_sensor* sensor) {
 		Nan::EscapableHandleScope scope;
 
-		v8::Local<v8::Function> cons   = Nan::New<v8::Function>(constructor_);
+		v8::Local<v8::Function> cons   = Nan::New<v8::Function>(constructor);
 		v8::Local<v8::Context> context = v8::Isolate::GetCurrent()->GetCurrentContext();
 
-		v8::Local<v8::Object> instance = cons->NewInstance(context, 0, nullptr).ToLocalChecked();
+		Object instance = cons->NewInstance(context, 0, nullptr).ToLocalChecked();
 
 		auto me		= Nan::ObjectWrap::Unwrap<RSSensor>(instance);
-		me->sensor_ = sensor;
+		this->sensor_ = sensor;
 		return scope.Escape(instance);
 	}
 
@@ -118,87 +128,87 @@ class RSSensor
 		profile_list_ = nullptr;
 	}
 
-	static void New(const Nan::FunctionCallbackInfo<v8::Value>& info) {
+	static void New(const CallbackInfo& info) {
 		if (info.IsConstructCall()) {
 			RSSensor* obj = new RSSensor();
 			obj->Wrap(info.This());
-			info.GetReturnValue().Set(info.This());
+			return info.This();
 		}
 	}
 
-	static NAN_METHOD(SupportsOption) {
+	Napi::Value SupportsOption(const CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSSensor>(info.Holder());
-		if (me) return me->SupportsOptionInternal(info);
+		if (me) return this->SupportsOptionInternal(info);
 
-		info.GetReturnValue().Set(Nan::False());
+		return Boolean::New(info.Env(), false);
 	}
 
-	static NAN_METHOD(GetOption) {
+	Napi::Value GetOption(const CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSSensor>(info.Holder());
-		if (me) return me->GetOptionInternal(info);
+		if (me) return this->GetOptionInternal(info);
 
-		info.GetReturnValue().Set(Nan::Undefined());
+		return info.Env().Undefined();
 	}
 
-	static NAN_METHOD(GetOptionDescription) {
+	Napi::Value GetOptionDescription(const CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSSensor>(info.Holder());
-		if (me) return me->GetOptionDescriptionInternal(info);
+		if (me) return this->GetOptionDescriptionInternal(info);
 
-		info.GetReturnValue().Set(Nan::Undefined());
+		return info.Env().Undefined();
 	}
 
-	static NAN_METHOD(GetOptionValueDescription) {
+	Napi::Value GetOptionValueDescription(const CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSSensor>(info.Holder());
-		if (me) return me->GetOptionValueDescriptionInternal(info);
+		if (me) return this->GetOptionValueDescriptionInternal(info);
 
-		info.GetReturnValue().Set(Nan::Undefined());
+		return info.Env().Undefined();
 	}
 
-	static NAN_METHOD(SetOption) {
+	Napi::Value SetOption(const CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSSensor>(info.Holder());
-		if (me) return me->SetOptionInternal(info);
+		if (me) return this->SetOptionInternal(info);
 
-		info.GetReturnValue().Set(Nan::Undefined());
+		return info.Env().Undefined();
 	}
 
-	static NAN_METHOD(GetOptionRange) {
+	Napi::Value GetOptionRange(const CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSSensor>(info.Holder());
-		if (me) return me->GetOptionRangeInternal(info);
+		if (me) return this->GetOptionRangeInternal(info);
 
-		info.GetReturnValue().Set(Nan::Undefined());
+		return info.Env().Undefined();
 	}
 
-	static NAN_METHOD(IsOptionReadonly) {
+	Napi::Value IsOptionReadonly(const CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSSensor>(info.Holder());
-		if (me) return me->IsOptionReadonlyInternal(info);
+		if (me) return this->IsOptionReadonlyInternal(info);
 
-		info.GetReturnValue().Set(Nan::False());
+		return Boolean::New(info.Env(), false);
 	}
 
-	static NAN_METHOD(GetCameraInfo) {
-		info.GetReturnValue().Set(Nan::Undefined());
+	Napi::Value GetCameraInfo(const CallbackInfo& info) {
+		return info.Env().Undefined();
 		int32_t camera_info = info[0]->IntegerValue();
 		;
 		auto me = Nan::ObjectWrap::Unwrap<RSSensor>(info.Holder());
 		if (!me) return;
 
 		auto value = GetNativeResult<
-		  const char*>(rs2_get_sensor_info, &me->error_, me->sensor_, static_cast<rs2_camera_info>(camera_info), &me->error_);
-		if (me->error_) return;
+		  const char*>(rs2_get_sensor_info, &this->error_, this->sensor_, static_cast<rs2_camera_info>(camera_info), &this->error_);
+		if (this->error_) return;
 
 		info.GetReturnValue().Set(Nan::New(value).ToLocalChecked());
 	}
 
-	static NAN_METHOD(StartWithSyncer) {
-		info.GetReturnValue().Set(Nan::Undefined());
+	Napi::Value StartWithSyncer(const CallbackInfo& info) {
+		return info.Env().Undefined();
 		auto syncer = Nan::ObjectWrap::Unwrap<RSSyncer>(info[0]->ToObject());
 		auto me		= Nan::ObjectWrap::Unwrap<RSSensor>(info.Holder());
 		if (!me || !syncer) return;
 
-		CallNativeFunc(rs2_start_cpp, &me->error_, me->sensor_, new FrameCallbackForProcessingBlock(syncer->syncer_), &me->error_);
+		CallNativeFunc(rs2_start_cpp, &this->error_, this->sensor_, new FrameCallbackForProcessingBlock(syncer->syncer_), &this->error_);
 	}
 
-	static NAN_METHOD(StartWithCallback) {
+	Napi::Value StartWithCallback(const CallbackInfo& info) {
 		auto frame			 = Nan::ObjectWrap::Unwrap<RSFrame>(info[1]->ToObject());
 		auto depth_frame	 = Nan::ObjectWrap::Unwrap<RSFrame>(info[2]->ToObject());
 		auto video_frame	 = Nan::ObjectWrap::Unwrap<RSFrame>(info[3]->ToObject());
@@ -207,36 +217,36 @@ class RSSensor
 		auto pose_frame		 = Nan::ObjectWrap::Unwrap<RSFrame>(info[6]->ToObject());
 		auto me				 = Nan::ObjectWrap::Unwrap<RSSensor>(info.Holder());
 		if (me && frame && depth_frame && video_frame && disparity_frame && motion_frame && pose_frame) {
-			me->frame_			 = frame;
-			me->depth_frame_	 = depth_frame;
-			me->video_frame_	 = video_frame;
-			me->disparity_frame_ = disparity_frame;
-			me->motion_frame_	= motion_frame;
-			me->pose_frame_		 = pose_frame;
+			this->frame_			 = frame;
+			this->depth_frame_	 = depth_frame;
+			this->video_frame_	 = video_frame;
+			this->disparity_frame_ = disparity_frame;
+			this->motion_frame_	= motion_frame;
+			this->pose_frame_		 = pose_frame;
 			v8::String::Utf8Value str(info[0]);
-			me->frame_callback_name_ = std::string(*str);
-			CallNativeFunc(rs2_start_cpp, &me->error_, me->sensor_, new FrameCallbackForProc(me), &me->error_);
+			this->frame_callback_name_ = std::string(*str);
+			CallNativeFunc(rs2_start_cpp, &this->error_, this->sensor_, new FrameCallbackForProc(me), &this->error_);
 		}
-		info.GetReturnValue().Set(Nan::Undefined());
+		return info.Env().Undefined();
 	}
 
-	static NAN_METHOD(Destroy) {
+	Napi::Value Destroy(const CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSSensor>(info.Holder());
-		if (me) { me->DestroyMe(); }
-		info.GetReturnValue().Set(Nan::Undefined());
+		if (me) { this->DestroyMe(); }
+		return info.Env().Undefined();
 	}
 
-	static NAN_METHOD(OpenStream) {
-		info.GetReturnValue().Set(Nan::Undefined());
+	Napi::Value OpenStream(const CallbackInfo& info) {
+		return info.Env().Undefined();
 		auto me		 = Nan::ObjectWrap::Unwrap<RSSensor>(info.Holder());
 		auto profile = Nan::ObjectWrap::Unwrap<RSStreamProfile>(info[0]->ToObject());
 		if (!me || !profile) return;
 
-		CallNativeFunc(rs2_open, &me->error_, me->sensor_, profile->profile_, &me->error_);
+		CallNativeFunc(rs2_open, &this->error_, this->sensor_, profile->profile_, &this->error_);
 	}
 
-	static NAN_METHOD(OpenMultipleStream) {
-		info.GetReturnValue().Set(Nan::Undefined());
+	Napi::Value OpenMultipleStream(const CallbackInfo& info) {
+		return info.Env().Undefined();
 		auto me = Nan::ObjectWrap::Unwrap<RSSensor>(info.Holder());
 		if (!me) return;
 
@@ -247,67 +257,67 @@ class RSSensor
 			auto profile = Nan::ObjectWrap::Unwrap<RSStreamProfile>(array->Get(i)->ToObject());
 			profs.push_back(profile->profile_);
 		}
-		CallNativeFunc(rs2_open_multiple, &me->error_, me->sensor_, profs.data(), len, &me->error_);
+		CallNativeFunc(rs2_open_multiple, &this->error_, this->sensor_, profs.data(), len, &this->error_);
 	}
 
-	static NAN_METHOD(Stop) {
+	Napi::Value Stop(const CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSSensor>(info.Holder());
 		if (!me) return;
 
-		CallNativeFunc(rs2_stop, &me->error_, me->sensor_, &me->error_);
+		CallNativeFunc(rs2_stop, &this->error_, this->sensor_, &this->error_);
 	}
 
-	static NAN_METHOD(GetStreamProfiles) {
-		info.GetReturnValue().Set(Nan::Undefined());
+	Napi::Value GetStreamProfiles(const CallbackInfo& info) {
+		return info.Env().Undefined();
 		auto me = Nan::ObjectWrap::Unwrap<RSSensor>(info.Holder());
 		if (!me) return;
 
-		rs2_stream_profile_list* list = me->profile_list_;
+		rs2_stream_profile_list* list = this->profile_list_;
 		if (!list) {
 			list = GetNativeResult<
-			  rs2_stream_profile_list*>(rs2_get_stream_profiles, &me->error_, me->sensor_, &me->error_);
-			me->profile_list_ = list;
+			  rs2_stream_profile_list*>(rs2_get_stream_profiles, &this->error_, this->sensor_, &this->error_);
+			this->profile_list_ = list;
 		}
 		if (!list) return;
 
-		int32_t size = GetNativeResult<int>(rs2_get_stream_profiles_count, &me->error_, list, &me->error_);
+		int32_t size = GetNativeResult<int>(rs2_get_stream_profiles_count, &this->error_, list, &this->error_);
 		v8::Local<v8::Array> array = Nan::New<v8::Array>(size);
 		for (int32_t i = 0; i < size; i++) {
-			rs2_stream_profile* profile = const_cast<rs2_stream_profile*>(rs2_get_stream_profile(list, i, &me->error_));
+			rs2_stream_profile* profile = const_cast<rs2_stream_profile*>(rs2_get_stream_profile(list, i, &this->error_));
 			array->Set(i, RSStreamProfile::NewInstance(profile));
 		}
 		info.GetReturnValue().Set(array);
 	}
 
-	static NAN_METHOD(SupportsCameraInfo) {
+	Napi::Value SupportsCameraInfo(const CallbackInfo& info) {
 		info.GetReturnValue().Set(Nan::False());
 		int32_t camera_info = info[0]->IntegerValue();
 		auto me				= Nan::ObjectWrap::Unwrap<RSSensor>(info.Holder());
 		if (!me) return;
 
 		int32_t on = GetNativeResult<
-		  int>(rs2_supports_sensor_info, &me->error_, me->sensor_, (rs2_camera_info) camera_info, &me->error_);
+		  int>(rs2_supports_sensor_info, &this->error_, this->sensor_, (rs2_camera_info) camera_info, &this->error_);
 		info.GetReturnValue().Set(Nan::New(on ? true : false));
 	}
 
-	static NAN_METHOD(Close) {
+	Napi::Value Close(const CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSSensor>(info.Holder());
 		if (!me) return;
 
-		CallNativeFunc(rs2_close, &me->error_, me->sensor_, &me->error_);
+		CallNativeFunc(rs2_close, &this->error_, this->sensor_, &this->error_);
 	}
 
-	static NAN_METHOD(SetNotificationCallback) {
+	Napi::Value SetNotificationCallback(const CallbackInfo& info) {
 		auto me = Nan::ObjectWrap::Unwrap<RSSensor>(info.Holder());
 		if (!me) return;
 
 		v8::String::Utf8Value value(info[0]->ToString());
-		me->notification_callback_name_ = std::string(*value);
-		me->RegisterNotificationCallbackMethod();
+		this->notification_callback_name_ = std::string(*value);
+		this->RegisterNotificationCallbackMethod();
 	}
 
-	static NAN_METHOD(SetRegionOfInterest) {
-		info.GetReturnValue().Set(Nan::Undefined());
+	Napi::Value SetRegionOfInterest(const CallbackInfo& info) {
+		return info.Env().Undefined();
 		int32_t minx = info[0]->IntegerValue();
 		int32_t miny = info[1]->IntegerValue();
 		int32_t maxx = info[2]->IntegerValue();
@@ -315,11 +325,11 @@ class RSSensor
 		auto me		 = Nan::ObjectWrap::Unwrap<RSSensor>(info.Holder());
 		if (!me) return;
 
-		CallNativeFunc(rs2_set_region_of_interest, &me->error_, me->sensor_, minx, miny, maxx, maxy, &me->error_);
+		CallNativeFunc(rs2_set_region_of_interest, &this->error_, this->sensor_, minx, miny, maxx, maxy, &this->error_);
 	}
 
-	static NAN_METHOD(GetRegionOfInterest) {
-		info.GetReturnValue().Set(Nan::Undefined());
+	Napi::Value GetRegionOfInterest(const CallbackInfo& info) {
+		return info.Env().Undefined();
 		int32_t minx = 0;
 		int32_t miny = 0;
 		int32_t maxx = 0;
@@ -327,48 +337,48 @@ class RSSensor
 		auto me		 = Nan::ObjectWrap::Unwrap<RSSensor>(info.Holder());
 		if (!me) return;
 
-		CallNativeFunc(rs2_get_region_of_interest, &me->error_, me->sensor_, &minx, &miny, &maxx, &maxy, &me->error_);
-		if (me->error_) return;
+		CallNativeFunc(rs2_get_region_of_interest, &this->error_, this->sensor_, &minx, &miny, &maxx, &maxy, &this->error_);
+		if (this->error_) return;
 		info.GetReturnValue().Set(RSRegionOfInterest(minx, miny, maxx, maxy).GetObject());
 	}
 
-	static NAN_METHOD(GetDepthScale) {
-		info.GetReturnValue().Set(Nan::Undefined());
+	Napi::Value GetDepthScale(const CallbackInfo& info) {
+		return info.Env().Undefined();
 		auto me = Nan::ObjectWrap::Unwrap<RSSensor>(info.Holder());
 		if (!me) return;
 
-		auto scale = GetNativeResult<float>(rs2_get_depth_scale, &me->error_, me->sensor_, &me->error_);
-		if (me->error_) return;
+		auto scale = GetNativeResult<float>(rs2_get_depth_scale, &this->error_, this->sensor_, &this->error_);
+		if (this->error_) return;
 
 		info.GetReturnValue().Set(Nan::New(scale));
 	}
 
-	static NAN_METHOD(IsDepthSensor) {
-		info.GetReturnValue().Set(Nan::Undefined());
+	Napi::Value IsDepthSensor(const CallbackInfo& info) {
+		return info.Env().Undefined();
 		auto me = Nan::ObjectWrap::Unwrap<RSSensor>(info.Holder());
 		if (!me) return;
 
 		bool is_depth = GetNativeResult<
-		  int>(rs2_is_sensor_extendable_to, &me->error_, me->sensor_, RS2_EXTENSION_DEPTH_SENSOR, &me->error_);
-		if (me->error_) return;
+		  int>(rs2_is_sensor_extendable_to, &this->error_, this->sensor_, RS2_EXTENSION_DEPTH_SENSOR, &this->error_);
+		if (this->error_) return;
 
 		info.GetReturnValue().Set(Nan::New(is_depth));
 	}
 
-	static NAN_METHOD(IsROISensor) {
-		info.GetReturnValue().Set(Nan::Undefined());
+	Napi::Value IsROISensor(const CallbackInfo& info) {
+		return info.Env().Undefined();
 		auto me = Nan::ObjectWrap::Unwrap<RSSensor>(info.Holder());
 		if (!me) return;
 
 		bool is_roi
-		  = GetNativeResult<int>(rs2_is_sensor_extendable_to, &me->error_, me->sensor_, RS2_EXTENSION_ROI, &me->error_);
-		if (me->error_) return;
+		  = GetNativeResult<int>(rs2_is_sensor_extendable_to, &this->error_, this->sensor_, RS2_EXTENSION_ROI, &this->error_);
+		if (this->error_) return;
 
 		info.GetReturnValue().Set(Nan::New(is_roi));
 	}
 
   private:
-	static Nan::Persistent<v8::Function> constructor_;
+	static FunctionReference constructor;
 	rs2_sensor* sensor_;
 	rs2_error* error_;
 	rs2_stream_profile_list* profile_list_;
@@ -386,7 +396,8 @@ class RSSensor
 	friend class NotificationCallbackInfo;
 };
 
-Nan::Persistent<v8::Function> RSSensor::constructor_;
+Napi::FunctionReference RSSensor::constructor;
+
 
 void RSSensor::RegisterNotificationCallbackMethod() {
 	CallNativeFunc(rs2_set_notifications_callback_cpp, &error_, sensor_, new NotificationCallback(this), &error_);
