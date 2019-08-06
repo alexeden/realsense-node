@@ -1,10 +1,10 @@
 #ifndef SYNCER_H
 #define SYNCER_H
+#include "frameset.cc"
 #include "utils.cc"
 #include <iostream>
 #include <librealsense2/hpp/rs_types.hpp>
 #include <napi.h>
-#include "frameset.cc"
 using namespace Napi;
 
 class RSSyncer : public ObjectWrap<RSSyncer> {
@@ -71,7 +71,7 @@ class RSSyncer : public ObjectWrap<RSSyncer> {
 	Napi::Value WaitForFrames(const CallbackInfo& info) {
 		auto frameset = ObjectWrap<RSFrameSet>::Unwrap(info[0].ToObject());
 		auto timeout  = info[1].ToNumber().Uint32Value();
-		if (!this || !frameset) return Boolean::New(info.Env(), false);;
+		if (!frameset) return Boolean::New(info.Env(), false);
 
 		rs2_frame* frames
 		  = GetNativeResult<rs2_frame*>(rs2_wait_for_frame, &this->error_, this->frame_queue_, timeout, &this->error_);
@@ -89,7 +89,7 @@ class RSSyncer : public ObjectWrap<RSSyncer> {
 
 	Napi::Value PollForFrames(const CallbackInfo& info) {
 		auto frameset = ObjectWrap<RSFrameSet>::Unwrap(info[0].As<Object>());
-		if (!this || !frameset) return Boolean::New(info.Env(), false);
+		if (!frameset) return Boolean::New(info.Env(), false);
 
 		rs2_frame* frame_ref = nullptr;
 		auto res

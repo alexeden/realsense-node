@@ -1,7 +1,6 @@
 #ifndef CONTEXT_H
 #define CONTEXT_H
 
-#include "main_thread_callback.cc"
 #include <iostream>
 #include <librealsense2/h/rs_internal.h>
 #include <librealsense2/hpp/rs_types.hpp>
@@ -9,6 +8,7 @@
 #include <napi.h>
 // #include "sensor.cc"
 #include "device_list.cc"
+#include "main_thread_callback.cc"
 // #include "devices_changed_callback.cc"
 #include "utils.cc"
 
