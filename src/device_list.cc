@@ -10,7 +10,7 @@
 
 using namespace Napi;
 
-class RSDeviceList : ObjectWrap<RSDeviceList> {
+class RSDeviceList : public ObjectWrap<RSDeviceList> {
   public:
 	static Object Init(Napi::Env env, Object exports) {
 		Napi::Function func = DefineClass(
@@ -44,7 +44,6 @@ class RSDeviceList : ObjectWrap<RSDeviceList> {
 		// return scope.Escape(instance);
 	}
 
-  private:
 	RSDeviceList(const CallbackInfo& info)
 	  : ObjectWrap<RSDeviceList>(info)
 	  , error_(nullptr)
@@ -55,6 +54,7 @@ class RSDeviceList : ObjectWrap<RSDeviceList> {
 		DestroyMe();
 	}
 
+  private:
 	void DestroyMe() {
 		if (error_) rs2_free_error(error_);
 		error_ = nullptr;
@@ -70,7 +70,7 @@ class RSDeviceList : ObjectWrap<RSDeviceList> {
 	Napi::Value Contains(const CallbackInfo& info) {
 		auto dev = ObjectWrap<RSDevice>::Unwrap(info[0].As<Object>());
 		bool contains = GetNativeResult<int>(rs2_device_list_contains, &this->error_, this->list_, dev->dev_, &this->error_);
-		if (this->error_) return;
+		if (this->error_) throw Napi::Error::New(info.Env(), "Error trying to check if device list contains device");;
 
 		return Boolean::New(info.Env(), contains);
 	}
@@ -88,7 +88,6 @@ class RSDeviceList : ObjectWrap<RSDeviceList> {
 		return RSDevice::NewInstance(info.Env(), dev);
 	}
 
-  private:
 	static FunctionReference constructor;
 	rs2_error* error_;
 	rs2_device_list* list_;

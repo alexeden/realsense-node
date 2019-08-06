@@ -8,6 +8,7 @@
 #include "dict_base.cc"
 #include "error_util.cc"
 #include "main_thread_callback.cc"
+#include "context.cc"
 
 // using namespace std;
 using namespace Napi;
@@ -34,6 +35,10 @@ Object Init(Env env, Object exports) {
 	exports.Set("getError", Function::New(env, GetError));
 	exports.Set("getTime", Function::New(env, GetTime));
 	exports.Set("registerErrorCallback", Function::New(env, RegisterErrorCallback));
+	RSContext::Init(env, exports);
+	RSDeviceList::Init(env, exports);
+	RSDevice::Init(env, exports);
+
 	return exports;
 }
 

@@ -88,7 +88,7 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 	  : Napi::ObjectWrap<RSDevice>(info)
 	  , dev_(nullptr)
 	  , error_(nullptr) {
-		type_ = info[0].As<DeviceType>();
+		type_ = static_cast<DeviceType>(info[0].As<Number>().Uint32Value());
 	}
 
 	~RSDevice() {
@@ -108,7 +108,7 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 
 		auto value = GetNativeResult<
 		  const char*>(rs2_get_device_info, &this->error_, this->dev_, static_cast<rs2_camera_info>(camera_info), &this->error_);
-		if (this->error_) return;
+		if (this->error_) throw Napi::Error::New(info.Env(), "Error trying to get camera info");
 
 		return String::New(info.Env(), value);
 	}
@@ -122,7 +122,7 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 		int32_t camera_info = info[0].As<Number>().Int32Value();
 		int32_t on			= GetNativeResult<
 		   int>(rs2_supports_device_info, &this->error_, this->dev_, (rs2_camera_info) camera_info, &this->error_);
-		if (this->error_) return;
+		if (this->error_) throw Napi::Error::New(info.Env(), "Error trying to get camera support info");;
 
 		return on ? Boolean::New(info.Env(), true) : Boolean::New(info.Env(), false);
 	}
@@ -158,6 +158,8 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 		raw_data[4]			 = 0x4d;
 		raw_data[8]			 = 4;
 		CallNativeFunc(rs2_send_and_receive_raw_data, &this->error_, this->dev_, static_cast<void*>(raw_data), 24, &this->error_);
+
+		return info.Env().Undefined();
 	}
 
 	// Napi::Value SpawnRecorderDevice(const Napi::CallbackInfo& info) {
@@ -189,9 +191,9 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 			file = GetNativeResult<const char*>(rs2_record_device_filename, &this->error_, this->dev_, &this->error_);
 		}
 		else {
-			return;
+			return String::New(info.Env(), "");
 		}
-		if (this->error_) return;
+		if (this->error_) throw Napi::Error::New(info.Env(), "Error trying to get filename");
 
 		return String::New(info.Env(), file);
 	}
@@ -234,7 +236,7 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 
 	Napi::Value IsRealTime(const Napi::CallbackInfo& info) {
 		auto val = GetNativeResult<int>(rs2_playback_device_is_real_time, &this->error_, this->dev_, &this->error_);
-		if (this->error_) return;
+		if (this->error_) throw Napi::Error::New(info.Env(), "Error trying to get device real-time state");;
 
 		return val ? Boolean::New(info.Env(), true) : Boolean::New(info.Env(), false);
 	}
@@ -266,7 +268,8 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 	Napi::Value GetCurrentStatus(const Napi::CallbackInfo& info) {
 		auto status = GetNativeResult<
 		  rs2_playback_status>(rs2_playback_device_get_current_status, &this->error_, this->dev_, &this->error_);
-		if (this->error_) return;
+
+		if (this->error_) throw Napi::Error::New(info.Env(), "Error trying to get current device status");
 
 		return Number::New(info.Env(), status);
 	}
@@ -292,11 +295,15 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 
 	Napi::Value EnableLoopback(const Napi::CallbackInfo& info) {
 		std::string file = info[0].As<String>().ToString();
-		CallNativeFunc(rs2_loopback_enable, &this->error_, this->dev_, file, &this->error_);
+		CallNativeFunc(rs2_loopback_enable, &this->error_, this->dev_, file.c_str(), &this->error_);
+
+        return info.Env().Undefined();
 	}
 
 	Napi::Value DisableLoopback(const Napi::CallbackInfo& info) {
 		CallNativeFunc(rs2_loopback_disable, &this->error_, this->dev_, &this->error_);
+
+        return info.Env().Undefined();
 	}
 
 	Napi::Value IsLoopbackEnabled(const Napi::CallbackInfo& info) {
@@ -312,11 +319,14 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 		  this->dev_,
 		  static_cast<const uint8_t*>(array_buffer.Data()),
 		  &this->error_);
+
+        return info.Env().Undefined();
 	}
 
 	Napi::Value DisconnectController(const Napi::CallbackInfo& info) {
 		auto id = info[0].As<Number>().Int32Value();
 		CallNativeFunc(rs2_disconnect_tm2_controller, &this->error_, this->dev_, id, &this->error_);
+        return info.Env().Undefined();
 	}
 
   private:

@@ -59,7 +59,9 @@ class RSContext : public ObjectWrap<RSContext> {
 	  , ctx_(nullptr)
 	  , error_(nullptr)
 	  , mode_(RS2_RECORDING_MODE_BLANK_FRAMES) {
-		this->type_ = info[0].IsNumber() ? info[0].As<ContextType>() : kNormal;
+		this->type_ = info[0].IsNumber()
+			? static_cast<ContextType>(info[0].As<Number>().Uint32Value())
+			: kNormal;
 
 		ContextType type = kNormal;
 		if (info.Length()) {
@@ -121,6 +123,8 @@ class RSContext : public ObjectWrap<RSContext> {
 				  = GetNativeResult<rs2_context*>(rs2_create_context, &this->error_, RS2_API_VERSION, &this->error_);
 				break;
 		}
+
+		return info.Env().Undefined();
 	}
 
 	Napi::Value Destroy(const CallbackInfo& info) {

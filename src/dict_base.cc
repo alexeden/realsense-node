@@ -12,8 +12,8 @@ class DictBase {
 
   public:
 	DictBase(Env env, Object source)
-	  : _env(env)
-	  , _obj(source) {
+	  : _obj(source)
+	  , _env(env) {
 	}
 
 	DictBase(Env env)
