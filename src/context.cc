@@ -118,7 +118,7 @@ class RSContext : public ObjectWrap<RSContext> {
 	}
 
   private:
-	void RegisterDevicesChangedCallbackMethod();
+	void RegisterDevicesChangedCallbackMethod(Napi::Env env);
 
 	void DestroyMe() {
 		if (error_) rs2_free_error(error_);
@@ -137,7 +137,7 @@ class RSContext : public ObjectWrap<RSContext> {
 		this->device_changed_callback_ = Persistent(info[0].As<Function>());
 		this->device_changed_callback_.SuppressDestruct();
 		// this->device_changed_callback_name_ = info[0].As<String>().ToString();
-		this->RegisterDevicesChangedCallbackMethod();
+		this->RegisterDevicesChangedCallbackMethod(info.Env());
 
 		return info.This();
 	}
