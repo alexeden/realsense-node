@@ -47,9 +47,10 @@ class RSContext : public ObjectWrap<RSContext> {
 		Object instance = constructor.New({});
 
 		// If ctx_ptr is provided, no need to call create.
-		// if (ctx_ptr) {
-		// 	this->ctx_ = ctx_ptr;
-		// }
+		if (ctx_ptr) {
+			auto unwrapped  = ObjectWrap<RSContext>::Unwrap(instance);
+			unwrapped->ctx_ = ctx_ptr;
+		}
 		return scope.Escape(napi_value(instance)).ToObject();
 	}
 
@@ -79,7 +80,11 @@ class RSContext : public ObjectWrap<RSContext> {
 
 		MainThreadCallback::Init();
 
-		// std::cerr << "Context type is " << this->type_ << std::endl;
+		if (this->ctx_) {
+			std::cerr << "Skipping creation of RSContext" << std::endl;
+			return;
+		}
+
 		switch (this->type_) {
 			case kRecording:
 				this->ctx_ = GetNativeResult<rs2_context*>(

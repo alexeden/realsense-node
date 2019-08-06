@@ -77,7 +77,7 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 	}
 
 	// explicit RSDevice(DeviceType type = kNormalDevice)
-	RSDevice(const CallbackInfo& info)
+	explicit RSDevice(const CallbackInfo& info)
 	  : Napi::ObjectWrap<RSDevice>(info)
 	  , dev_(nullptr)
 	  , error_(nullptr)
@@ -97,10 +97,10 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 	}
 
 	Napi::Value GetCameraInfo(const Napi::CallbackInfo& info) {
-		int32_t camera_info = info[0].As<Number>().Int32Value();
+		auto camera_info = static_cast<rs2_camera_info>(info[0].As<Number>().Int32Value());
 
-		auto value = GetNativeResult<
-		  const char*>(rs2_get_device_info, &this->error_, this->dev_, static_cast<rs2_camera_info>(camera_info), &this->error_);
+		auto value
+		  = GetNativeResult<const char*>(rs2_get_device_info, &this->error_, this->dev_, camera_info, &this->error_);
 		if (this->error_) throw Napi::Error::New(info.Env(), "Error trying to get camera info");
 
 		return String::New(info.Env(), value);
@@ -112,11 +112,10 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 	}
 
 	Napi::Value SupportsCameraInfo(const Napi::CallbackInfo& info) {
-		int32_t camera_info = info[0].As<Number>().Int32Value();
-		int32_t on			= GetNativeResult<
-		   int>(rs2_supports_device_info, &this->error_, this->dev_, (rs2_camera_info) camera_info, &this->error_);
+		auto camera_info = static_cast<rs2_camera_info>(info[0].As<Number>().Int32Value());
+		int32_t on
+		  = GetNativeResult<int>(rs2_supports_device_info, &this->error_, this->dev_, camera_info, &this->error_);
 		if (this->error_) throw Napi::Error::New(info.Env(), "Error trying to get camera support info");
-		;
 
 		return on ? Boolean::New(info.Env(), true) : Boolean::New(info.Env(), false);
 	}
