@@ -1,24 +1,12 @@
 #ifndef OPTIONS_H
 #define OPTIONS_H
 
-#include <napi.h>
-#include <librealsense2/hpp/rs_types.hpp>
+#include "dicts.cc"
 #include "utils.cc"
-#include "dict_base.cc"
+#include <librealsense2/hpp/rs_types.hpp>
+#include <napi.h>
 
 using namespace Napi;
-
-class RSOptionRange : public DictBase {
- public:
-  RSOptionRange(Env env, float min, float max, float step, float def) : DictBase(env) {
-    SetMemberT("minValue", min);
-    SetMemberT("maxValue", max);
-    SetMemberT("step", step);
-    SetMemberT("defaultValue", def);
-  }
-};
-
-
 
 class Options {
   public:

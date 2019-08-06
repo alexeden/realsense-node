@@ -24,6 +24,10 @@ class DictBase {
 	~DictBase() {
 	}
 
+	// Env Env() {
+	// 	return this->_env;
+	// }
+
 	Value GetMember(const char* name) const {
 		return _obj.Get(name);
 	}
