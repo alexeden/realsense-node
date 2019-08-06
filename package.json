@@ -23,7 +23,8 @@
     "merge-submodule-upstream": "(cd vendor && git fetch && git merge origin/master)",
     "preinstall": "node scripts/build-librealsense",
     "prepublishOnly": "npm run lint && npm run build",
-    "quick-build": "rimraf dist && node-gyp build && tsc -p src"
+    "quick-build": "rimraf dist && node-gyp build && tsc -p src",
+    "test-changes": "nodemon --config nodemon.test.json"
   },
   "keywords": [
     "realsense",

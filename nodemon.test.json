@@ -1,0 +1,11 @@
+{
+  "ext": "ts,json,cc,h,gyp",
+  "exec": "npm run build && node examples/test.js",
+  "restartable": true,
+  "events": {},
+  "watch": [
+    "src/**",
+    "examples/**",
+    "binding.gyp"
+  ]
+}
