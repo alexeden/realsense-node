@@ -1,35 +1,40 @@
 #ifndef FRAMESET_H
 #define FRAMESET_H
 
-class RSFrameSet : public Nan::ObjectWrap {
+#include "utils.cc"
+#include <iostream>
+#include <librealsense2/hpp/rs_types.hpp>
+#include <napi.h>
+using namespace Napi;
+
+class RSFrameSet : public ObjectWrap<RSFrameSet> {
   public:
-	static void Init(v8::Local<v8::Object> exports) {
-		v8::Local<v8::FunctionTemplate> tpl = Nan::New<v8::FunctionTemplate>(New);
-		tpl->SetClassName(Nan::New("RSFrameSet").ToLocalChecked());
-		tpl->InstanceTemplate()->SetInternalFieldCount(1);
+	static Object Init(Napi::Env env, Object exports) {
+		Napi::Function func = DefineClass(
+		  env,
+		  "RSFrameSet",
+		  {
+			InstanceMethod("destroy", &RSFrameSet::Destroy),
+			InstanceMethod("getSize", &RSFrameSet::GetSize),
+			InstanceMethod("getFrame", &RSFrameSet::GetFrame),
+			InstanceMethod("replaceFrame", &RSFrameSet::ReplaceFrame),
+			InstanceMethod("indexToStream", &RSFrameSet::IndexToStream),
+			InstanceMethod("indexToStreamIndex", &RSFrameSet::IndexToStreamIndex),
+		  });
+		constructor = Napi::Persistent(func);
+		constructor.SuppressDestruct();
+		exports.Set("RSFrameSet", func);
 
-		Nan::SetPrototypeMethod(tpl, "destroy", Destroy);
-		Nan::SetPrototypeMethod(tpl, "getSize", GetSize);
-		Nan::SetPrototypeMethod(tpl, "getFrame", GetFrame);
-		Nan::SetPrototypeMethod(tpl, "replaceFrame", ReplaceFrame);
-		Nan::SetPrototypeMethod(tpl, "indexToStream", IndexToStream);
-		Nan::SetPrototypeMethod(tpl, "indexToStreamIndex", IndexToStreamIndex);
-
-		constructor_.Reset(tpl->GetFunction());
-		exports->Set(Nan::New("RSFrameSet").ToLocalChecked(), tpl->GetFunction());
+		return exports;
 	}
 
-	static v8::Local<v8::Object> NewInstance(rs2_frame* frame) {
-		Nan::EscapableHandleScope scope;
+	static Object NewInstance(Napi::Env env, rs2_frame* frame) {
+		EscapableHandleScope scope(env);
+		Object instance = constructor.New({});
+		auto unwrapped  = ObjectWrap<RSFrameSet>::Unwrap(instance);
+		unwrapped->SetFrame(frame);
 
-		v8::Local<v8::Function> cons   = Nan::New<v8::Function>(constructor_);
-		v8::Local<v8::Context> context = v8::Isolate::GetCurrent()->GetCurrentContext();
-
-		v8::Local<v8::Object> instance = cons->NewInstance(context, 0, nullptr).ToLocalChecked();
-		auto me						   = Nan::ObjectWrap::Unwrap<RSFrameSet>(instance);
-		me->SetFrame(frame);
-
-		return scope.Escape(instance);
+		return scope.Escape(napi_value(instance)).ToObject();
 	}
 
 	rs2_frame* GetFrames() {
@@ -42,7 +47,8 @@ class RSFrameSet : public Nan::ObjectWrap {
 	}
 
   private:
-	RSFrameSet() {
+	RSFrameSet(const CallbackInfo& info)
+	  : ObjectWrap<RSFrameSet>(info) {
 		error_  = nullptr;
 		frames_ = nullptr;
 	}
@@ -69,105 +75,99 @@ class RSFrameSet : public Nan::ObjectWrap {
 		frames_ = nullptr;
 	}
 
-	static NAN_METHOD(Destroy) {
-		auto me = Nan::ObjectWrap::Unwrap<RSFrameSet>(info.Holder());
-		if (me) { me->DestroyMe(); }
-		info.GetReturnValue().Set(Nan::Undefined());
+	Napi::Value Destroy(const CallbackInfo& info) {
+		auto unwrapped = ObjectWrap<RSFrameSet>::Unwrap(info[0].As<Object>());
+		// auto this = Nan::ObjectWrap::Unwrap<RSFrameSet>(info.Holder());
+		if (unwrapped) { unwrapped->DestroyMe(); }
+		return info.Env().Undefined();
 	}
 
-	static void New(const Nan::FunctionCallbackInfo<v8::Value>& info) {
-		if (info.IsConstructCall()) {
-			RSFrameSet* obj = new RSFrameSet();
-			obj->Wrap(info.This());
-			info.GetReturnValue().Set(info.This());
-		}
+	// static void New(const CallbackInfo& info) {
+	// 	if (info.IsConstructCall()) {
+	// 		RSFrameSet* obj = new RSFrameSet(info);
+	// 		obj->Wrap(info.This());
+	// 		info.GetReturnValue().Set(info.This());
+	// 	}
+	// }
+
+	Napi::Value GetSize(const CallbackInfo& info) {
+		if (this && this->frames_) { return Number::New(info.Env(), this->frame_count_); }
+		return Number::New(info.Env(), 0);
 	}
 
-	static NAN_METHOD(GetSize) {
-		auto me = Nan::ObjectWrap::Unwrap<RSFrameSet>(info.Holder());
-		if (me && me->frames_) {
-			info.GetReturnValue().Set(Nan::New(me->frame_count_));
-			return;
-		}
-		info.GetReturnValue().Set(Nan::New(0));
-	}
+	Napi::Value GetFrame(const CallbackInfo& info) {
+		if (!this || !this->frames_) return info.Env().Undefined();
 
-	static NAN_METHOD(GetFrame) {
-		info.GetReturnValue().Set(Nan::Undefined());
-		auto me = Nan::ObjectWrap::Unwrap<RSFrameSet>(info.Holder());
-		if (!me || !me->frames_) return;
-
-		rs2_stream stream = static_cast<rs2_stream>(info[0]->IntegerValue());
-		auto stream_index = info[1]->IntegerValue();
+		rs2_stream stream = static_cast<rs2_stream>(info[0].ToNumber().Int32Value());
+		auto stream_index = info[1].ToNumber().Int32Value();
 		// if RS2_STREAM_ANY is used, we return the first frame.
-		if (stream == RS2_STREAM_ANY && me->frame_count_) {
-			rs2_frame* frame = GetNativeResult<rs2_frame*>(rs2_extract_frame, &me->error_, me->frames_, 0, &me->error_);
-			if (!frame) return;
+		if (stream == RS2_STREAM_ANY && this->frame_count_) {
+			rs2_frame* frame
+			  = GetNativeResult<rs2_frame*>(rs2_extract_frame, &this->error_, this->frames_, 0, &this->error_);
+			if (!frame) return info.Env().Undefined();
 
-			info.GetReturnValue().Set(RSFrame::NewInstance(frame));
-			return;
+			return RSFrame::NewInstance(frame);
 		}
 
-		for (uint32_t i = 0; i < me->frame_count_; i++) {
-			rs2_frame* frame = GetNativeResult<rs2_frame*>(rs2_extract_frame, &me->error_, me->frames_, i, &me->error_);
+		for (uint32_t i = 0; i < this->frame_count_; i++) {
+			rs2_frame* frame
+			  = GetNativeResult<rs2_frame*>(rs2_extract_frame, &this->error_, this->frames_, i, &this->error_);
 			if (!frame) continue;
 
 			const rs2_stream_profile* profile = GetNativeResult<
-			  const rs2_stream_profile*>(rs2_get_frame_stream_profile, &me->error_, frame, &me->error_);
+			  const rs2_stream_profile*>(rs2_get_frame_stream_profile, &this->error_, frame, &this->error_);
 			if (profile) {
 				StreamProfileExtrator extrator(profile);
 				if (
 				  extrator.stream_ == stream && (!stream_index || (stream_index && stream_index == extrator.index_))) {
-					info.GetReturnValue().Set(RSFrame::NewInstance(frame));
-					return;
+					return RSFrame::NewInstance(frame);
 				}
 			}
 			rs2_release_frame(frame);
 		}
 	}
 
-	static NAN_METHOD(ReplaceFrame) {
-		info.GetReturnValue().Set(Nan::False());
-		auto me			  = Nan::ObjectWrap::Unwrap<RSFrameSet>(info.Holder());
-		rs2_stream stream = static_cast<rs2_stream>(info[0]->IntegerValue());
-		auto stream_index = info[1]->IntegerValue();
-		auto target_frame = Nan::ObjectWrap::Unwrap<RSFrame>(info[2]->ToObject());
+	Napi::Value ReplaceFrame(const CallbackInfo& info) {
+		rs2_stream stream = static_cast<rs2_stream>(info[0].ToNumber().Int32Value());
+		auto stream_index = info[1].ToNumber().Int32Value();
+		auto target_frame = ObjectWrap<RSFrame>::Unwrap(info[2].ToObject());
 
-		if (!me || !me->frames_) return;
+		if (!this || !this->frames_) return Boolean::New(info.Env(), false);
 
-		for (uint32_t i = 0; i < me->frame_count_; i++) {
-			rs2_frame* frame = GetNativeResult<rs2_frame*>(rs2_extract_frame, &me->error_, me->frames_, i, &me->error_);
+		for (uint32_t i = 0; i < this->frame_count_; i++) {
+			rs2_frame* frame
+			  = GetNativeResult<rs2_frame*>(rs2_extract_frame, &this->error_, this->frames_, i, &this->error_);
 			if (!frame) continue;
 
 			const rs2_stream_profile* profile = GetNativeResult<
-			  const rs2_stream_profile*>(rs2_get_frame_stream_profile, &me->error_, frame, &me->error_);
+			  const rs2_stream_profile*>(rs2_get_frame_stream_profile, &this->error_, frame, &this->error_);
 			if (profile) {
 				StreamProfileExtrator extrator(profile);
 				if (
 				  extrator.stream_ == stream && (!stream_index || (stream_index && stream_index == extrator.index_))) {
 					target_frame->Replace(frame);
-					info.GetReturnValue().Set(Nan::True());
-					return;
+					return Boolean::New(info.Env(), true);
 				}
 			}
 			rs2_release_frame(frame);
 		}
+
+		return Boolean::New(info.Env(), false);
 	}
 
-	static NAN_METHOD(IndexToStream) {
-		info.GetReturnValue().Set(Nan::Undefined());
-		auto me = Nan::ObjectWrap::Unwrap<RSFrameSet>(info.Holder());
-		if (!me || !me->frames_) return;
+	Napi::Value IndexToStream(const CallbackInfo& info) {
+		if (!this || !this->frames_) return info.Env().Undefined();
 
-		int32_t index	= info[0]->IntegerValue();
-		rs2_frame* frame = GetNativeResult<rs2_frame*>(rs2_extract_frame, &me->error_, me->frames_, index, &me->error_);
-		if (!frame) return;
+		int32_t index = info[0].ToNumber().Int32Value();
+		rs2_frame* frame
+		  = GetNativeResult<rs2_frame*>(rs2_extract_frame, &this->error_, this->frames_, index, &this->error_);
+		if (!frame) return info.Env().Undefined();
 
-		const rs2_stream_profile* profile
-		  = GetNativeResult<const rs2_stream_profile*>(rs2_get_frame_stream_profile, &me->error_, frame, &me->error_);
+		const rs2_stream_profile* profile = GetNativeResult<
+		  const rs2_stream_profile*>(rs2_get_frame_stream_profile, &this->error_, frame, &this->error_);
 		if (!profile) {
 			rs2_release_frame(frame);
-			return;
+			return info.Env().Undefined();
 		}
 
 		rs2_stream stream = RS2_STREAM_ANY;
@@ -175,47 +175,48 @@ class RSFrameSet : public Nan::ObjectWrap {
 		int32_t fps		  = 0;
 		int32_t idx		  = 0;
 		int32_t unique_id = 0;
-		CallNativeFunc(rs2_get_stream_profile_data, &me->error_, profile, &stream, &format, &idx, &unique_id, &fps, &me->error_);
+		CallNativeFunc(
+		  rs2_get_stream_profile_data, &this->error_, profile, &stream, &format, &idx, &unique_id, &fps, &this->error_);
 		rs2_release_frame(frame);
-		if (me->error_) return;
+		if (this->error_) return info.Env().Undefined();
 
-		info.GetReturnValue().Set(Nan::New(stream));
+		return Number::New(info.Env(), stream);
 	}
 
-	static NAN_METHOD(IndexToStreamIndex) {
-		auto me = Nan::ObjectWrap::Unwrap<RSFrameSet>(info.Holder());
-		info.GetReturnValue().Set(Nan::Undefined());
-		if (!me || !me->frames_) return;
+	Napi::Value IndexToStreamIndex(const CallbackInfo& info) {
+		if (!this || !this->frames_) return info.Env().Undefined();
 
-		int32_t index	= info[0]->IntegerValue();
-		rs2_frame* frame = GetNativeResult<rs2_frame*>(rs2_extract_frame, &me->error_, me->frames_, index, &me->error_);
-		if (!frame) return;
+		int32_t index = info[0].ToNumber().Int32Value();
+		rs2_frame* frame
+		  = GetNativeResult<rs2_frame*>(rs2_extract_frame, &this->error_, this->frames_, index, &this->error_);
+		if (!frame) return info.Env().Undefined();
 
-		const rs2_stream_profile* profile
-		  = GetNativeResult<const rs2_stream_profile*>(rs2_get_frame_stream_profile, &me->error_, frame, &me->error_);
+		const rs2_stream_profile* profile = GetNativeResult<
+		  const rs2_stream_profile*>(rs2_get_frame_stream_profile, &this->error_, frame, &this->error_);
 		if (!profile) {
 			rs2_release_frame(frame);
-			return;
+			return info.Env().Undefined();
 		}
 		rs2_stream stream = RS2_STREAM_ANY;
 		rs2_format format = RS2_FORMAT_ANY;
 		int32_t fps		  = 0;
 		int32_t idx		  = 0;
 		int32_t unique_id = 0;
-		CallNativeFunc(rs2_get_stream_profile_data, &me->error_, profile, &stream, &format, &idx, &unique_id, &fps, &me->error_);
+		CallNativeFunc(
+		  rs2_get_stream_profile_data, &this->error_, profile, &stream, &format, &idx, &unique_id, &fps, &this->error_);
 		rs2_release_frame(frame);
-		if (me->error_) return;
+		if (this->error_) return info.Env().Undefined();
 
-		info.GetReturnValue().Set(Nan::New(idx));
+		return Number::New(info.Env(), idx);
 	}
 
   private:
-	static Nan::Persistent<v8::Function> constructor_;
+	static FunctionReference constructor;
 	rs2_frame* frames_;
 	uint32_t frame_count_;
 	rs2_error* error_;
 };
 
-Nan::Persistent<v8::Function> RSFrameSet::constructor_;
+Napi::FunctionReference RSFrameSet::constructor;
 
 #endif
