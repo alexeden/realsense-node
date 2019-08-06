@@ -14,27 +14,30 @@ using namespace Napi;
 class RSStreamProfile : public ObjectWrap<RSStreamProfile> {
   public:
 	static Object Init(Napi::Env env, Object exports) {
-		v8::Local<v8::FunctionTemplate> tpl = Nan::New<v8::FunctionTemplate>(New);
-		tpl->SetClassName(Nan::New("RSStreamProfile").ToLocalChecked());
-		tpl->InstanceTemplate()->SetInternalFieldCount(1);
+		Napi::Function func = DefineClass(
+		  env,
+		  "RSSyncer",
+		  {
+			InstanceMethod("destroy", &RSStreamProfile::Destroy),
+			InstanceMethod("stream", &RSStreamProfile::Stream),
+			InstanceMethod("format", &RSStreamProfile::Format),
+			InstanceMethod("fps", &RSStreamProfile::Fps),
+			InstanceMethod("index", &RSStreamProfile::Index),
+			InstanceMethod("uniqueID", &RSStreamProfile::UniqueID),
+			InstanceMethod("isDefault", &RSStreamProfile::IsDefault),
+			InstanceMethod("isVideoProfile", &RSStreamProfile::IsVideoProfile),
+			InstanceMethod("isMotionProfile", &RSStreamProfile::IsMotionProfile),
+			InstanceMethod("width", &RSStreamProfile::Width),
+			InstanceMethod("height", &RSStreamProfile::Height),
+			InstanceMethod("getExtrinsicsTo", &RSStreamProfile::GetExtrinsicsTo),
+			InstanceMethod("getVideoStreamIntrinsics", &RSStreamProfile::GetVideoStreamIntrinsics),
+			InstanceMethod("getMotionIntrinsics", &RSStreamProfile::GetMotionIntrinsics),
+		  });
+		constructor = Napi::Persistent(func);
+		constructor.SuppressDestruct();
+		exports.Set("RSStreamProfile", func);
 
-		Nan::SetPrototypeMethod(tpl, "destroy", Destroy);
-		Nan::SetPrototypeMethod(tpl, "stream", Stream);
-		Nan::SetPrototypeMethod(tpl, "format", Format);
-		Nan::SetPrototypeMethod(tpl, "fps", Fps);
-		Nan::SetPrototypeMethod(tpl, "index", Index);
-		Nan::SetPrototypeMethod(tpl, "uniqueID", UniqueID);
-		Nan::SetPrototypeMethod(tpl, "isDefault", IsDefault);
-		Nan::SetPrototypeMethod(tpl, "isVideoProfile", IsVideoProfile);
-		Nan::SetPrototypeMethod(tpl, "isMotionProfile", IsMotionProfile);
-		Nan::SetPrototypeMethod(tpl, "width", Width);
-		Nan::SetPrototypeMethod(tpl, "height", Height);
-		Nan::SetPrototypeMethod(tpl, "getExtrinsicsTo", GetExtrinsicsTo);
-		Nan::SetPrototypeMethod(tpl, "getVideoStreamIntrinsics", GetVideoStreamIntrinsics);
-		Nan::SetPrototypeMethod(tpl, "getMotionIntrinsics", GetMotionIntrinsics);
-
-		static FunctionReference constructor;
-		exports->Set(Nan::New("RSStreamProfile").ToLocalChecked(), tpl->GetFunction());
+		return exports;
 	}
 
 	static Object NewInstance(Napi::Env env, rs2_stream_profile* p, bool own = false) {
@@ -42,20 +45,11 @@ class RSStreamProfile : public ObjectWrap<RSStreamProfile> {
 
 		static FunctionReference constructor;
 		v8::Local<v8::Context> context = v8::Isolate::GetCurrent()->GetCurrentContext();
-
 		v8::Local<v8::Object> instance = cons->NewInstance(context, 0, nullptr).ToLocalChecked();
 		this->profile_				   = p;
 		this->own_profile_			   = own;
-		CallNativeFunc(
-		  rs2_get_stream_profile_data,
-		  &this->error_,
-		  p,
-		  &this->stream_,
-		  &this->format_,
-		  &this->index_,
-		  &this->unique_id_,
-		  &this->fps_,
-		  &this->error_);
+		auto p_args = { &this->stream_, &this->format_, &this->index_, &this->unique_id_, &this->fps_, &this->error_ };
+		CallNativeFunc(rs2_get_stream_profile_data, &this->error_, p, p_args...);
 		this->is_default_ = rs2_is_stream_profile_default(p, &this->error_);
 		if (GetNativeResult<
 			  bool>(rs2_stream_profile_is, &this->error_, p, RS2_EXTENSION_VIDEO_PROFILE, &this->error_)) {
