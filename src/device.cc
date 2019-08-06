@@ -9,7 +9,6 @@
 
 using namespace Napi;
 
-
 class RSDevice : public Napi::ObjectWrap<RSDevice> {
   public:
 	enum DeviceType {
@@ -70,25 +69,19 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 		EscapableHandleScope scope(env);
 		Object instance = constructor.New({});
 
+		auto unwrapped   = ObjectWrap<RSDevice>::Unwrap(instance);
+		unwrapped->dev_  = dev;
+		unwrapped->type_ = type;
+
 		return scope.Escape(napi_value(instance)).ToObject();
-
-		// v8::Local<v8::Function> cons   = Nan::New<v8::Function>(constructor);
-		// v8::Local<v8::Context> context = v8::Isolate::GetCurrent()->GetCurrentContext();
-
-		// Object instance = cons->NewInstance(context, 0, nullptr).ToLocalChecked();
-
-		// me->dev_  = dev;
-		// me->type_ = type;
-
-		// return scope.Escape(instance);
 	}
 
 	// explicit RSDevice(DeviceType type = kNormalDevice)
 	RSDevice(const CallbackInfo& info)
 	  : Napi::ObjectWrap<RSDevice>(info)
 	  , dev_(nullptr)
-	  , error_(nullptr) {
-		type_ = static_cast<DeviceType>(info[0].As<Number>().Uint32Value());
+	  , error_(nullptr)
+	  , type_(kNormalDevice) {
 	}
 
 	~RSDevice() {
@@ -122,7 +115,8 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 		int32_t camera_info = info[0].As<Number>().Int32Value();
 		int32_t on			= GetNativeResult<
 		   int>(rs2_supports_device_info, &this->error_, this->dev_, (rs2_camera_info) camera_info, &this->error_);
-		if (this->error_) throw Napi::Error::New(info.Env(), "Error trying to get camera support info");;
+		if (this->error_) throw Napi::Error::New(info.Env(), "Error trying to get camera support info");
+		;
 
 		return on ? Boolean::New(info.Env(), true) : Boolean::New(info.Env(), false);
 	}
@@ -134,8 +128,8 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 
 	// Napi::Value QuerySensors(const Napi::CallbackInfo& info) {
 	// 	std::shared_ptr<rs2_sensor_list>
-	// 	list(GetNativeResult<rs2_sensor_list*>(rs2_query_sensors, &this->error_, this->dev_, &this->error_), rs2_delete_sensor_list);
-	// 	if (!list) return;
+	// 	list(GetNativeResult<rs2_sensor_list*>(rs2_query_sensors, &this->error_, this->dev_, &this->error_),
+	// rs2_delete_sensor_list); 	if (!list) return;
 
 	// 	auto size = GetNativeResult<int>(rs2_get_sensors_count, &this->error_, list.get(), &this->error_);
 	// 	if (!size) return;
@@ -236,7 +230,8 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 
 	Napi::Value IsRealTime(const Napi::CallbackInfo& info) {
 		auto val = GetNativeResult<int>(rs2_playback_device_is_real_time, &this->error_, this->dev_, &this->error_);
-		if (this->error_) throw Napi::Error::New(info.Env(), "Error trying to get device real-time state");;
+		if (this->error_) throw Napi::Error::New(info.Env(), "Error trying to get device real-time state");
+		;
 
 		return val ? Boolean::New(info.Env(), true) : Boolean::New(info.Env(), false);
 	}
@@ -297,13 +292,13 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 		std::string file = info[0].As<String>().ToString();
 		CallNativeFunc(rs2_loopback_enable, &this->error_, this->dev_, file.c_str(), &this->error_);
 
-        return info.Env().Undefined();
+		return info.Env().Undefined();
 	}
 
 	Napi::Value DisableLoopback(const Napi::CallbackInfo& info) {
 		CallNativeFunc(rs2_loopback_disable, &this->error_, this->dev_, &this->error_);
 
-        return info.Env().Undefined();
+		return info.Env().Undefined();
 	}
 
 	Napi::Value IsLoopbackEnabled(const Napi::CallbackInfo& info) {
@@ -320,13 +315,13 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 		  static_cast<const uint8_t*>(array_buffer.Data()),
 		  &this->error_);
 
-        return info.Env().Undefined();
+		return info.Env().Undefined();
 	}
 
 	Napi::Value DisconnectController(const Napi::CallbackInfo& info) {
 		auto id = info[0].As<Number>().Int32Value();
 		CallNativeFunc(rs2_disconnect_tm2_controller, &this->error_, this->dev_, id, &this->error_);
-        return info.Env().Undefined();
+		return info.Env().Undefined();
 	}
 
   private:

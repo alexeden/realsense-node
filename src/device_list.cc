@@ -2,11 +2,8 @@
 #define DEVICE_LIST_H
 
 #include <napi.h>
-// #include <librealsense2/h/rs_internal.h>
 #include <librealsense2/hpp/rs_types.hpp>
-// #include <librealsense2/rs.h>
 #include "device.cc"
-
 
 using namespace Napi;
 
@@ -31,7 +28,6 @@ class RSDeviceList : public ObjectWrap<RSDeviceList> {
 	}
 
 	static Object NewInstance(Napi::Env env, rs2_device_list* list) {
-		// std::cerr << __LINE__ << " RSDeviceList::NewInstance got dev_list: " << list << std::endl;
 		EscapableHandleScope scope(env);
 		Object instance = constructor.New({});
 
