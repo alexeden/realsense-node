@@ -101,8 +101,9 @@ class RSSensor
 	}
 
   private:
-	RSSensor()
-	  : sensor_(nullptr)
+	RSSensor(const CallbackInfo& info)
+	  : ObjectWrap<RSSensor>(info)
+	  , sensor_(nullptr)
 	  , error_(nullptr)
 	  , profile_list_(nullptr)
 	  , frame_(nullptr)
