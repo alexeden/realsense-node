@@ -5,6 +5,7 @@
 #include <iostream>
 #include <librealsense2/hpp/rs_types.hpp>
 #include <napi.h>
+#include "stream_profile.cc"
 using namespace Napi;
 
 class RSFrame : public ObjectWrap<RSFrame> {
@@ -65,12 +66,12 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		return scope.Escape(napi_value(instance)).ToObject();
 	}
 
-	void Replace(rs2_frame* value) {
-		DestroyMe();
-		frame_ = value;
-		// As the underlying frame changed, we must clean the js side's buffer
-		Function::MakeCallback(handle(), "_internalResetBuffer", 0, nullptr);
-	}
+	// void Replace(rs2_frame* value) {
+	// 	DestroyMe();
+	// 	frame_ = value;
+	// 	// As the underlying frame changed, we must clean the js side's buffer
+	// 	Function::MakeCallback(handle(), "_internalResetBuffer", 0, nullptr);
+	// }
 
   private:
 	RSFrame(const CallbackInfo& info)
@@ -90,7 +91,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 	}
 
 	static void SetAFloatInVectorObject(Napi::Env env, Object obj, uint32_t index, float value) {
-		const char* names[4]	   = { "x", "y", "z", "w" };
+		const char* names[4] = { "x", "y", "z", "w" };
 		obj.Set(names[index], Number::New(env, value));
 	}
 
@@ -131,7 +132,6 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		FillAFloatVector(env, angular_velocity_obj, pose.angular_velocity);
 		FillAFloatVector(env, angular_acceleration_obj, pose.angular_acceleration);
 
-
 		obj.Set(tracker_confidence_name, Number::New(env, pose.tracker_confidence));
 		obj.Set(mapper_confidence_name, Number::New(env, pose.mapper_confidence));
 	}
@@ -160,7 +160,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		  rs2_stream_profile*>(rs2_clone_stream_profile, &this->error_, profile_org, stream, index, format, &this->error_);
 		if (!profile) return info.Env().Undefined();
 
-		info.GetReturnValue().Set(RSStreamProfile::NewInstance(profile, true));
+		return RSStreamProfile::NewInstance(profile, true);
 	}
 
 	Napi::Value GetData(const CallbackInfo& info) {
@@ -171,13 +171,12 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		  = GetNativeResult<int>(rs2_get_frame_stride_in_bytes, &this->error_, this->frame_, &this->error_);
 		const auto height = GetNativeResult<int>(rs2_get_frame_height, &this->error_, this->frame_, &this->error_);
 		const auto length = stride * height;
-		auto array_buffer = v8::ArrayBuffer::
-		  New(v8::Isolate::GetCurrent(), static_cast<uint8_t*>(const_cast<void*>(buffer)), length, v8::ArrayBufferCreationMode::kExternalized);
-		info.GetReturnValue().Set(array_buffer);
+		auto array_buffer = ArrayBuffer::New(info.Env(), static_cast<uint8_t*>(const_cast<void*>(buffer)), length);
+		return TypedArrayOf<uint8_t>::New(info.Env(), length, array_buffer, 0);
 	}
 
 	Napi::Value WriteData(const CallbackInfo& info) {
-		auto array_buffer = v8::Local<v8::ArrayBuffer>::Cast(info[0]);
+		auto array_buffer = info[0].As<ArrayBuffer>();
 
 		const auto buffer
 		  = GetNativeResult<const void*>(rs2_get_frame_data, &this->error_, this->frame_, &this->error_);
@@ -185,9 +184,8 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		  = GetNativeResult<int>(rs2_get_frame_stride_in_bytes, &this->error_, this->frame_, &this->error_);
 		const auto height   = GetNativeResult<int>(rs2_get_frame_height, &this->error_, this->frame_, &this->error_);
 		const size_t length = stride * height;
-		if (buffer && array_buffer->ByteLength() >= length) {
-			auto contents = array_buffer->GetContents();
-			memcpy(contents.Data(), buffer, length);
+		if (buffer && array_buffer.ByteLength() >= length) {
+			memcpy(array_buffer.Data(), buffer, length);
 		}
 		return info.Env().Undefined();
 	}
@@ -264,9 +262,9 @@ class RSFrame : public ObjectWrap<RSFrame> {
 
 	Napi::Value GetFrameMetadata(const CallbackInfo& info) {
 		rs2_frame_metadata_value metadata = static_cast<rs2_frame_metadata_value>(info[0].ToNumber().Int32Value());
-		Nan::TypedArrayContents<unsigned char> content(info[1]);
-		unsigned char* internal_data = *content;
-		if (!this || !internal_data) return Boolean::New(info.Env(), false);
+		TypedArray content(info.Env(), info[1]);
+		auto data = content.ArrayBuffer().Data();
+		if (!data) return Boolean::New(info.Env(), false);
 
 		rs2_metadata_type output = GetNativeResult<
 		  rs2_metadata_type>(rs2_get_frame_metadata, &this->error_, this->frame_, metadata, &this->error_);
@@ -276,11 +274,11 @@ class RSFrame : public ObjectWrap<RSFrame> {
 
 		if (*val_ptr == 0) {
 			// big endian
-			memcpy(internal_data, out_ptr, 8);
+			memcpy(data, out_ptr, 8);
 		}
 		else {
 			// little endian
-			for (int32_t i = 0; i < 8; i++) { internal_data[i] = out_ptr[7 - i]; }
+			for (int32_t i = 0; i < 8; i++) { (&data)[i] = out_ptr[7 - i]; }
 		}
 
 		return Boolean::New(info.Env(), true);
@@ -318,10 +316,8 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		auto vertex_buf = static_cast<uint8_t*>(malloc(len));
 
 		for (size_t i = 0; i < count; i++) { memcpy(vertex_buf + i * step, vertices[i].xyz, step); }
-		auto array_buffer = v8::ArrayBuffer::
-		  New(v8::Isolate::GetCurrent(), vertex_buf, len, v8::ArrayBufferCreationMode::kInternalized);
-
-		info.GetReturnValue().Set(v8::Float32Array::New(array_buffer, 0, 3 * count));
+		auto array_buffer = ArrayBuffer::New(info.Env(), vertex_buf, len);
+		return TypedArrayOf<float>::New(info.Env(), 3 * count, array_buffer, 0);
 	}
 
 	Napi::Value GetVerticesBufferLen(const CallbackInfo& info) {
@@ -341,7 +337,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 	}
 
 	Napi::Value WriteVertices(const CallbackInfo& info) {
-		auto array_buffer = v8::Local<v8::ArrayBuffer>::Cast(info[0]);
+		auto array_buffer = info[0].As<ArrayBuffer>();
 
 		const rs2_vertex* vertBuf
 		  = GetNativeResult<rs2_vertex*>(rs2_get_frame_vertices, &this->error_, this->frame_, &this->error_);
@@ -351,11 +347,9 @@ class RSFrame : public ObjectWrap<RSFrame> {
 
 		const uint32_t step   = 3 * sizeof(float);
 		const uint32_t length = count * step;
-		if (array_buffer->ByteLength() < length) return Boolean::New(info.Env(), false);
-		;
+		if (array_buffer.ByteLength() < length) return Boolean::New(info.Env(), false);
 
-		auto contents		= array_buffer->GetContents();
-		uint8_t* vertex_buf = static_cast<uint8_t*>(contents.Data());
+		uint8_t* vertex_buf = static_cast<uint8_t*>(array_buffer.Data());
 		for (size_t i = 0; i < count; i++) { memcpy(vertex_buf + i * step, vertBuf[i].xyz, step); }
 		return Boolean::New(info.Env(), true);
 	}
@@ -371,14 +365,13 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		auto texcoord_buf = static_cast<uint8_t*>(malloc(len));
 
 		for (size_t i = 0; i < count; ++i) { memcpy(texcoord_buf + i * step, coords[i].ij, step); }
-		auto array_buffer = v8::ArrayBuffer::
-		  New(v8::Isolate::GetCurrent(), texcoord_buf, len, v8::ArrayBufferCreationMode::kInternalized);
+		auto array_buffer = ArrayBuffer::New(info.Env(), texcoord_buf, len);
 
-		info.GetReturnValue().Set(v8::Int32Array::New(array_buffer, 0, 2 * count));
+		return TypedArrayOf<float>::New(info.Env(), 2 * count, array_buffer, 0);
 	}
 
 	Napi::Value WriteTextureCoordinates(const CallbackInfo& info) {
-		auto array_buffer = v8::Local<v8::ArrayBuffer>::Cast(info[0]);
+		auto array_buffer = info[0].As<ArrayBuffer>();
 
 		const rs2_pixel* coords = rs2_get_frame_texture_coordinates(this->frame_, &this->error_);
 		const size_t count
@@ -387,10 +380,9 @@ class RSFrame : public ObjectWrap<RSFrame> {
 
 		const uint32_t step   = 2 * sizeof(int);
 		const uint32_t length = count * step;
-		if (array_buffer->ByteLength() < length) return Boolean::New(info.Env(), false);
+		if (array_buffer.ByteLength() < length) return Boolean::New(info.Env(), false);
 
-		auto contents		  = array_buffer->GetContents();
-		uint8_t* texcoord_buf = static_cast<uint8_t*>(contents.Data());
+		uint8_t* texcoord_buf = static_cast<uint8_t*>(array_buffer.Data());
 		for (size_t i = 0; i < count; ++i) { memcpy(texcoord_buf + i * step, coords[i].ij, step); }
 		return Boolean::New(info.Env(), true);
 	}
@@ -401,9 +393,9 @@ class RSFrame : public ObjectWrap<RSFrame> {
 	}
 
 	Napi::Value ExportToPly(const CallbackInfo& info) {
-		auto texture	 = ObjectWrap<RSFrame>::Unwrap(info[1].ToObject());
-		auto file = std::string(info[0].ToString()).c_str();
-		if (!this || !texture) return info.Env().Undefined();
+		auto texture = ObjectWrap<RSFrame>::Unwrap(info[1].ToObject());
+		auto file	= std::string(info[0].ToString()).c_str();
+		if (!texture) return info.Env().Undefined();
 
 		rs2_frame* ptr = nullptr;
 		std::swap(texture->frame_, ptr);
