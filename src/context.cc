@@ -27,7 +27,6 @@ class RSContext : public ObjectWrap<RSContext> {
 		  "RSContext",
 		  {
 			InstanceMethod("destroy", &RSContext::Destroy),
-			InstanceMethod("create", &RSContext::Create),
 			InstanceMethod("queryDevices", &RSContext::QueryDevices),
 			InstanceMethod("setDevicesChangedCallback", &RSContext::SetDevicesChangedCallback),
 			// InstanceMethod("loadDeviceFile", &RSContext::LoadDeviceFile),
@@ -120,38 +119,6 @@ class RSContext : public ObjectWrap<RSContext> {
 		error_ = nullptr;
 		if (ctx_) rs2_delete_context(ctx_);
 		ctx_ = nullptr;
-	}
-
-	Napi::Value Create(const CallbackInfo& info) {
-		MainThreadCallback::Init();
-
-		switch (this->type_) {
-			case kRecording:
-				this->ctx_ = GetNativeResult<rs2_context*>(
-				  rs2_create_recording_context,
-				  &this->error_,
-				  RS2_API_VERSION,
-				  this->file_name_.c_str(),
-				  this->section_.c_str(),
-				  this->mode_,
-				  &this->error_);
-				break;
-			case kPlayback:
-				this->ctx_ = GetNativeResult<rs2_context*>(
-				  rs2_create_mock_context,
-				  &this->error_,
-				  RS2_API_VERSION,
-				  this->file_name_.c_str(),
-				  this->section_.c_str(),
-				  &this->error_);
-				break;
-			default:
-				this->ctx_
-				  = GetNativeResult<rs2_context*>(rs2_create_context, &this->error_, RS2_API_VERSION, &this->error_);
-				break;
-		}
-
-		return info.Env().Undefined();
 	}
 
 	Napi::Value Destroy(const CallbackInfo& info) {
