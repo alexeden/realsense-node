@@ -2,7 +2,8 @@
 #define CONTEXT_H
 
 #include "main_thread_callback.cc"
-#include "sensor.cc"
+// #include "sensor.cc"
+#include "device_list.cc"
 #include "utils.cc"
 #include <librealsense2/h/rs_internal.h>
 #include <librealsense2/hpp/rs_types.hpp>
@@ -28,9 +29,9 @@ class RSContext : public ObjectWrap<RSContext> {
 			InstanceMethod("create", &RSContext::Create),
 			InstanceMethod("queryDevices", &RSContext::QueryDevices),
 			InstanceMethod("setDevicesChangedCallback", &RSContext::SetDevicesChangedCallback),
-			InstanceMethod("loadDeviceFile", &RSContext::LoadDeviceFile),
-			InstanceMethod("unloadDeviceFile", &RSContext::UnloadDeviceFile),
-			InstanceMethod("createDeviceFromSensor", &RSContext::CreateDeviceFromSensor),
+			// InstanceMethod("loadDeviceFile", &RSContext::LoadDeviceFile),
+			// InstanceMethod("unloadDeviceFile", &RSContext::UnloadDeviceFile),
+			// InstanceMethod("createDeviceFromSensor", &RSContext::CreateDeviceFromSensor),
 
 		  });
 
@@ -134,35 +135,34 @@ class RSContext : public ObjectWrap<RSContext> {
 		return info.This();
 	}
 
-	Napi::Value LoadDeviceFile(const CallbackInfo& info) {
-		std::string device_file = info[0].As<String>().ToString();
-		auto dev
-		  = GetNativeResult<rs2_device*>(rs2_context_add_device, &this->error_, this->ctx_, device_file, &this->error_);
-		if (!dev) return;
+	// Napi::Value LoadDeviceFile(const CallbackInfo& info) {
+	// 	std::string device_file = info[0].As<String>().ToString();
+	// 	auto dev = GetNativeResult<rs2_device*>(rs2_context_add_device, &this->error_, this->ctx_, device_file, &this->error_);
+	// 	if (!dev) return;
 
-		auto jsobj = RSDevice::NewInstance(dev, RSDevice::kPlaybackDevice);
-		return jsobj;
-	}
+	// 	auto jsobj = RSDevice::NewInstance(dev, RSDevice::kPlaybackDevice);
+	// 	return jsobj;
+	// }
 
-	Napi::Value UnloadDeviceFile(const CallbackInfo& info) {
-		std::string device_file = info[0].As<String>().ToString();
-		CallNativeFunc(rs2_context_remove_device, &this->error_, this->ctx_, device_file, &this->error_);
-	}
+	// Napi::Value UnloadDeviceFile(const CallbackInfo& info) {
+	// 	std::string device_file = info[0].As<String>().ToString();
+	// 	CallNativeFunc(rs2_context_remove_device, &this->error_, this->ctx_, device_file, &this->error_);
+	// }
 
-	Napi::Value CreateDeviceFromSensor(const CallbackInfo& info) {
-		auto sensor = ObjectWrap<RSSensor>::Unwrap(info[0].As<Object>());
+	// Napi::Value CreateDeviceFromSensor(const CallbackInfo& info) {
+	// 	auto sensor = ObjectWrap<RSSensor>::Unwrap(info[0].As<Object>());
 
-		rs2_error* error = nullptr;
-		auto dev		 = GetNativeResult<rs2_device*>(rs2_create_device_from_sensor, &error, sensor->sensor_, &error);
-		if (!dev) return;
+	// 	rs2_error* error = nullptr;
+	// 	auto dev		 = GetNativeResult<rs2_device*>(rs2_create_device_from_sensor, &error, sensor->sensor_, &error);
+	// 	if (!dev) return;
 
-		return RSDevice::NewInstance(dev);
-	}
+	// 	return RSDevice::NewInstance(dev);
+	// }
 
 	Napi::Value QueryDevices(const CallbackInfo& info) {
 		auto dev_list = GetNativeResult<rs2_device_list*>(rs2_query_devices, &this->error_, this->ctx_, &this->error_);
 
-		return RSDeviceList::NewInstance(dev_list);
+		return RSDeviceList::NewInstance(info.Env(), dev_list);
 	}
 
   private:

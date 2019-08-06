@@ -30,14 +30,18 @@ class RSDeviceList : ObjectWrap<RSDeviceList> {
 		return exports;
 	}
 
-	static Object NewInstance(rs2_device_list* list) {
-		Nan::EscapableHandleScope scope;
-		v8::Local<v8::Function> cons   = Nan::New<v8::Function>(constructor);
-		v8::Local<v8::Context> context = v8::Isolate::GetCurrent()->GetCurrentContext();
-		Object instance				   = cons->NewInstance(context, 0, nullptr).ToLocalChecked();
-		auto me						   = ObjectWrap<RSDeviceList>::Unwrap(instance);
-		me->list_					   = list;
-		return scope.Escape(instance);
+	static Object NewInstance(Napi::Env env, rs2_device_list* list) {
+		EscapableHandleScope scope(env);
+		Object instance = constructor.New({});
+
+		return scope.Escape(napi_value(instance)).ToObject();
+		// Nan::EscapableHandleScope scope;
+		// v8::Local<v8::Function> cons   = Nan::New<v8::Function>(constructor);
+		// v8::Local<v8::Context> context = v8::Isolate::GetCurrent()->GetCurrentContext();
+		// Object instance				   = cons->NewInstance(context, 0, nullptr).ToLocalChecked();
+		// auto me						   = ObjectWrap<RSDeviceList>::Unwrap(instance);
+		// me->list_					   = list;
+		// return scope.Escape(instance);
 	}
 
   private:
@@ -81,7 +85,7 @@ class RSDeviceList : ObjectWrap<RSDeviceList> {
 
 		auto dev = GetNativeResult<rs2_device*>(rs2_create_device, &this->error_, this->list_, index, &this->error_);
 
-		return RSDevice::NewInstance(dev);
+		return RSDevice::NewInstance(info.Env(), dev);
 	}
 
   private:
