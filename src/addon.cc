@@ -9,6 +9,7 @@
 #include "error_util.cc"
 #include "main_thread_callback.cc"
 #include "context.cc"
+#include "devices_changed_callback.cc"
 
 // using namespace std;
 using namespace Napi;

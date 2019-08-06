@@ -9,6 +9,7 @@
 #include <napi.h>
 // #include "sensor.cc"
 #include "device_list.cc"
+// #include "devices_changed_callback.cc"
 #include "utils.cc"
 
 using namespace Napi;
@@ -28,7 +29,7 @@ class RSContext : public ObjectWrap<RSContext> {
 		  {
 			InstanceMethod("destroy", &RSContext::Destroy),
 			InstanceMethod("queryDevices", &RSContext::QueryDevices),
-			InstanceMethod("setDevicesChangedCallback", &RSContext::SetDevicesChangedCallback),
+			InstanceMethod("onDevicesChanged", &RSContext::OnDevicesChanged),
 			// InstanceMethod("loadDeviceFile", &RSContext::LoadDeviceFile),
 			// InstanceMethod("unloadDeviceFile", &RSContext::UnloadDeviceFile),
 			// InstanceMethod("createDeviceFromSensor", &RSContext::CreateDeviceFromSensor),
@@ -132,8 +133,9 @@ class RSContext : public ObjectWrap<RSContext> {
 		return info.Env().Undefined();
 	}
 
-	Napi::Value SetDevicesChangedCallback(const CallbackInfo& info) {
-		this->device_changed_callback_name_ = info[0].As<String>().ToString();
+	Napi::Value OnDevicesChanged(const CallbackInfo& info) {
+		this->device_changed_callback_ = info[0].As<Function>();
+		// this->device_changed_callback_name_ = info[0].As<String>().ToString();
 		this->RegisterDevicesChangedCallbackMethod();
 
 		return info.This();
@@ -173,9 +175,10 @@ class RSContext : public ObjectWrap<RSContext> {
   private:
 	static FunctionReference constructor;
 
+	Function device_changed_callback_;
 	rs2_context* ctx_;
 	rs2_error* error_;
-	std::string device_changed_callback_name_;
+	// std::string device_changed_callback_name_;
 	ContextType type_;
 	std::string file_name_;
 	std::string section_;

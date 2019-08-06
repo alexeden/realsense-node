@@ -1,10 +1,11 @@
 #ifndef DEVICES_CHANGED_CALLBACK_H
 #define DEVICES_CHANGED_CALLBACK_H
 
-#include "./context.cc"
-#include "./main_thread_callback.cc"
-#include <librealsense2/hpp/rs_types.hpp>
+#include <iostream>
 #include <napi.h>
+#include <librealsense2/hpp/rs_types.hpp>
+#include "context.cc"
+#include "main_thread_callback.cc"
 
 using namespace Napi;
 
@@ -20,21 +21,21 @@ class DevicesChangedCallbackInfo : public MainThreadCallbackInfo {
 	}
 	virtual void Run() {
 		SetConsumed();
-		Nan::HandleScope scope;
-		v8::Local<v8::Value> rmlist;
-		v8::Local<v8::Value> addlist;
-		if (removed_)
-			rmlist = RSDeviceList::NewInstance(removed_);
-		else
-			rmlist = Nan::Undefined();
+		// auto ctx = scope.Escape(napi_value(instance)).ToObject();
+		auto env = this->ctx_->Env();
+		// auto ctx = ObjectWrap<RSContext>::Unwrap(ctx_);
+		// HandleScope scope;
+		Value rmlist = removed_
+			? RSDeviceList::NewInstance(env, removed_)
+			: env.Undefined();
 
-		if (added_)
-			addlist = RSDeviceList::NewInstance(added_);
-		else
-			addlist = Nan::Undefined();
+		Value addlist = added_
+			? RSDeviceList::NewInstance(env, added_)
+			: env.Undefined();
 
-		v8::Local<v8::Value> args[2] = { rmlist, addlist };
-		Nan::MakeCallback(ctx_->handle(), ctx_->device_changed_callback_name_.c_str(), 2, args);
+		// this->ctx_->Value().Get(this->ctx_->device_changed_callback_name_)
+		this->ctx_->device_changed_callback_.Call({ rmlist, addlist });
+		// Function::MakeCallback(this->ctx_, args);
 	}
 	virtual void Release() {
 		if (removed_) {
@@ -73,6 +74,7 @@ class DevicesChangedCallback : public rs2_devices_changed_callback {
 };
 
 void RSContext::RegisterDevicesChangedCallbackMethod() {
+	std::cerr << "RSContext::RegisterDevicesChangedCallbackMethod" << std::endl;
 	CallNativeFunc(rs2_set_devices_changed_callback_cpp, &error_, ctx_, new DevicesChangedCallback(this), &error_);
 }
 

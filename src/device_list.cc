@@ -75,7 +75,6 @@ class RSDeviceList : public ObjectWrap<RSDeviceList> {
 
 	Napi::Value GetDevice(const CallbackInfo& info) {
 		auto index = info[0].As<Number>().ToNumber().Uint32Value();
-
 		auto dev = GetNativeResult<rs2_device*>(rs2_create_device, &this->error_, this->list_, index, &this->error_);
 
 		return RSDevice::NewInstance(info.Env(), dev);
