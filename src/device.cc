@@ -2,7 +2,7 @@
 #define DEVICE_H
 
 #include "main_thread_callback.cc"
-// #include "sensor.cc"
+#include "sensor.cc"
 #include "utils.cc"
 #include <librealsense2/hpp/rs_types.hpp>
 #include <napi.h>
@@ -26,7 +26,7 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 			InstanceMethod("getCameraInfo", &RSDevice::GetCameraInfo),
 			InstanceMethod("supportsCameraInfo", &RSDevice::SupportsCameraInfo),
 			InstanceMethod("reset", &RSDevice::Reset),
-			// InstanceMethod("querySensors", &RSDevice::QuerySensors),
+			InstanceMethod("querySensors", &RSDevice::QuerySensors),
 			InstanceMethod("triggerErrorForTest", &RSDevice::TriggerErrorForTest),
 			// InstanceMethod("spawnRecorderDevice", &RSDevice::SpawnRecorderDevice),
 
@@ -125,23 +125,23 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 		return info.This();
 	}
 
-	// Napi::Value QuerySensors(const Napi::CallbackInfo& info) {
-	// 	std::shared_ptr<rs2_sensor_list>
-	// 	list(GetNativeResult<rs2_sensor_list*>(rs2_query_sensors, &this->error_, this->dev_, &this->error_),
-	// rs2_delete_sensor_list); 	if (!list) return;
+	Napi::Value QuerySensors(const Napi::CallbackInfo& info) {
+		std::shared_ptr<rs2_sensor_list>
+		list(GetNativeResult<rs2_sensor_list*>(rs2_query_sensors, &this->error_, this->dev_, &this->error_), rs2_delete_sensor_list);
+		if (!list) return info.Env().Undefined();
 
-	// 	auto size = GetNativeResult<int>(rs2_get_sensors_count, &this->error_, list.get(), &this->error_);
-	// 	if (!size) return;
+		auto size = GetNativeResult<int>(rs2_get_sensors_count, &this->error_, list.get(), &this->error_);
+		if (!size) return info.Env().Undefined();
 
-	// 	auto array = Napi::Array::New(info.Env());
-	// 	for (int32_t i = 0; i < size; i++) {
-	// 		rs2_sensor* sensor
-	// 		  = GetNativeResult<rs2_sensor*>(rs2_create_sensor, &this->error_, list.get(), i, &this->error_);
-	// 		array.Set(i, RSSensor::NewInstance(sensor));
-	// 	}
+		auto array = Napi::Array::New(info.Env());
+		for (int32_t i = 0; i < size; i++) {
+			rs2_sensor* sensor
+			  = GetNativeResult<rs2_sensor*>(rs2_create_sensor, &this->error_, list.get(), i, &this->error_);
+			array.Set(i, RSSensor::NewInstance(info.Env(), sensor));
+		}
 
-	// 	return array;
-	// }
+		return array;
+	}
 
 	Napi::Value TriggerErrorForTest(const Napi::CallbackInfo& info) {
 		uint8_t raw_data[24] = { 0 };

@@ -66,12 +66,12 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		return scope.Escape(napi_value(instance)).ToObject();
 	}
 
-	// void Replace(rs2_frame* value) {
-	// 	DestroyMe();
-	// 	frame_ = value;
-	// 	// As the underlying frame changed, we must clean the js side's buffer
-	// 	Function::MakeCallback(handle(), "_internalResetBuffer", 0, nullptr);
-	// }
+	void Replace(rs2_frame* value) {
+		DestroyMe();
+		this->frame_ = value;
+		// As the underlying frame changed, we must clean the js side's buffer
+		// Function::MakeCallback(this, "_internalResetBuffer", 0, nullptr);
+	}
 
   private:
 	RSFrame(const CallbackInfo& info)
@@ -84,10 +84,10 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		DestroyMe();
 	}
 	void DestroyMe() {
-		if (error_) rs2_free_error(error_);
-		if (frame_) rs2_release_frame(frame_);
-		error_ = nullptr;
-		frame_ = nullptr;
+		if (this->error_) rs2_free_error(error_);
+		if (this->frame_) rs2_release_frame(frame_);
+		this->error_ = nullptr;
+		this->frame_ = nullptr;
 	}
 
 	static void SetAFloatInVectorObject(Napi::Env env, Object obj, uint32_t index, float value) {
@@ -307,7 +307,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		rs2_vertex* vertices
 		  = GetNativeResult<rs2_vertex*>(rs2_get_frame_vertices, &this->error_, this->frame_, &this->error_);
 		size_t count = GetNativeResult<size_t>(rs2_get_frame_points_count, &this->error_, this->frame_, &this->error_);
-		if (!vertices || !count) return;
+		if (!vertices || !count) return info.Env().Undefined();
 
 		uint32_t step   = 3 * sizeof(float);
 		uint32_t len	= count * step;
@@ -356,7 +356,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		rs2_pixel* coords
 		  = GetNativeResult<rs2_pixel*>(rs2_get_frame_texture_coordinates, &this->error_, this->frame_, &this->error_);
 		size_t count = GetNativeResult<size_t>(rs2_get_frame_points_count, &this->error_, this->frame_, &this->error_);
-		if (!coords || !count) return;
+		if (!coords || !count) return info.Env().Undefined();
 
 		uint32_t step	 = 2 * sizeof(int);
 		uint32_t len	  = count * step;

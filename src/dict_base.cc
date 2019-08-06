@@ -24,10 +24,6 @@ class DictBase {
 	~DictBase() {
 	}
 
-	// Env Env() {
-	// 	return this->_env;
-	// }
-
 	Value GetMember(const char* name) const {
 		return _obj.Get(name);
 	}
@@ -60,7 +56,7 @@ class DictBase {
 	void SetMemberArray(const char* name, V value[len]) {
 		Object array = Array::New(_env, len);
 		for (uint32_t i = 0; i < len; i++) {
-			array.Set(i, Value(value[i]).As<T>());
+			array.Set(i, Value(this->_env, value[i]).As<T>());
 		}
 		SetMember(name, array);
 	}

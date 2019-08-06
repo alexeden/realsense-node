@@ -1,6 +1,7 @@
 #ifndef STREAM_PROFILE_H
 #define STREAM_PROFILE_H
 
+#include "dicts.cc"
 #include "stream_profile.cc"
 #include "utils.cc"
 #include <iostream>
@@ -41,27 +42,43 @@ class RSStreamProfile : public ObjectWrap<RSStreamProfile> {
 	}
 
 	static Object NewInstance(Napi::Env env, rs2_stream_profile* p, bool own = false) {
-		Nan::EscapableHandleScope scope;
+		EscapableHandleScope scope(env);
+		Object instance = constructor.New({});
 
-		static FunctionReference constructor;
-		v8::Local<v8::Context> context = v8::Isolate::GetCurrent()->GetCurrentContext();
-		v8::Local<v8::Object> instance = cons->NewInstance(context, 0, nullptr).ToLocalChecked();
-		this->profile_				   = p;
-		this->own_profile_			   = own;
-		auto p_args = { &this->stream_, &this->format_, &this->index_, &this->unique_id_, &this->fps_, &this->error_ };
-		CallNativeFunc(rs2_get_stream_profile_data, &this->error_, p, p_args...);
-		this->is_default_ = rs2_is_stream_profile_default(p, &this->error_);
+		auto unwrapped			= ObjectWrap<RSStreamProfile>::Unwrap(instance);
+		unwrapped->profile_		= p;
+		unwrapped->own_profile_ = own;
+		CallNativeFunc(
+		  rs2_get_stream_profile_data,
+		  &unwrapped->error_,
+		  p,
+		  &unwrapped->stream_,
+		  &unwrapped->format_,
+		  &unwrapped->index_,
+		  &unwrapped->unique_id_,
+		  &unwrapped->fps_,
+		  &unwrapped->error_);
+
+		unwrapped->is_default_ = rs2_is_stream_profile_default(p, &unwrapped->error_);
+
 		if (GetNativeResult<
-			  bool>(rs2_stream_profile_is, &this->error_, p, RS2_EXTENSION_VIDEO_PROFILE, &this->error_)) {
-			this->is_video_ = true;
-			CallNativeFunc(rs2_get_video_stream_resolution, &this->error_, p, &this->width_, &this->height_, &this->error_);
+			  bool>(rs2_stream_profile_is, &unwrapped->error_, p, RS2_EXTENSION_VIDEO_PROFILE, &unwrapped->error_)) {
+			unwrapped->is_video_ = true;
+			CallNativeFunc(
+			  rs2_get_video_stream_resolution,
+			  &unwrapped->error_,
+			  p,
+			  &unwrapped->width_,
+			  &unwrapped->height_,
+			  &unwrapped->error_);
 		}
-		else if (GetNativeResult<
-				   bool>(rs2_stream_profile_is, &this->error_, p, RS2_EXTENSION_MOTION_PROFILE, &this->error_)) {
-			this->is_motion_ = true;
+		else if (
+		  GetNativeResult<
+			bool>(rs2_stream_profile_is, &unwrapped->error_, p, RS2_EXTENSION_MOTION_PROFILE, &unwrapped->error_)) {
+			unwrapped->is_motion_ = true;
 		}
 
-		return scope.Escape(instance);
+		return scope.Escape(napi_value(instance)).ToObject();
 	}
 
   private:
@@ -137,30 +154,26 @@ class RSStreamProfile : public ObjectWrap<RSStreamProfile> {
 		CallNativeFunc(rs2_get_extrinsics, &this->error_, this->profile_, to->profile_, &res, &this->error_);
 		if (this->error_) return info.Env().Undefined();
 
-		RSExtrinsics rsres(res);
-		info.GetReturnValue().Set(rsres.GetObject());
+		RSExtrinsics rsres(info.Env(), res);
+		return rsres.GetObject();
 	}
 
 	Napi::Value GetVideoStreamIntrinsics(const CallbackInfo& info) {
-		if (!this) return info.Env().Undefined();
-
 		rs2_intrinsics intr;
 		CallNativeFunc(rs2_get_video_stream_intrinsics, &this->error_, this->profile_, &intr, &this->error_);
 		if (this->error_) return info.Env().Undefined();
 
-		RSIntrinsics res(intr);
-		info.GetReturnValue().Set(res.GetObject());
+		RSIntrinsics res(info.Env(), intr);
+		return res.GetObject();
 	}
 
 	Napi::Value GetMotionIntrinsics(const CallbackInfo& info) {
-		if (!this) return info.Env().Undefined();
-
 		rs2_motion_device_intrinsic output;
 		CallNativeFunc(rs2_get_motion_intrinsics, &this->error_, this->profile_, &output, &this->error_);
 		if (this->error_) return info.Env().Undefined();
 
-		RSMotionIntrinsics intrinsics(&output);
-		info.GetReturnValue().Set(intrinsics.GetObject());
+		RSMotionIntrinsics intrinsics(info.Env(), &output);
+		return intrinsics.GetObject();
 	}
 
   private:

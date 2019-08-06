@@ -1,12 +1,11 @@
 #ifndef SYNCER_H
 #define SYNCER_H
+#include "frame_callbacks.cc"
+#include "frameset.cc"
+#include "utils.cc"
 #include <iostream>
 #include <librealsense2/hpp/rs_types.hpp>
 #include <napi.h>
-
-#include "frameset.cc"
-#include "frame_callbacks.cc"
-#include "utils.cc"
 
 using namespace Napi;
 
@@ -41,6 +40,11 @@ class RSSyncer : public ObjectWrap<RSSyncer> {
 	  , syncer_(nullptr)
 	  , frame_queue_(nullptr)
 	  , error_(nullptr) {
+		this->syncer_
+		  = GetNativeResult<rs2_processing_block*>(rs2_create_sync_processing_block, &this->error_, &this->error_);
+		this->frame_queue_ = GetNativeResult<rs2_frame_queue*>(rs2_create_frame_queue, &this->error_, 1, &this->error_);
+		auto callback	  = new FrameCallbackForFrameQueue(this->frame_queue_);
+		CallNativeFunc(rs2_start_processing, &this->error_, this->syncer_, callback, &this->error_);
 	}
 
 	~RSSyncer() {
@@ -54,21 +58,6 @@ class RSSyncer : public ObjectWrap<RSSyncer> {
 		syncer_ = nullptr;
 		if (frame_queue_) rs2_delete_frame_queue(frame_queue_);
 		frame_queue_ = nullptr;
-	}
-
-	static Napi::Value New(const CallbackInfo& info) {
-		if (info.IsConstructCall()) {
-			RSSyncer* obj = new RSSyncer(info);
-			obj->syncer_
-			  = GetNativeResult<rs2_processing_block*>(rs2_create_sync_processing_block, &obj->error_, &obj->error_);
-			obj->frame_queue_
-			  = GetNativeResult<rs2_frame_queue*>(rs2_create_frame_queue, &obj->error_, 1, &obj->error_);
-			auto callback = new FrameCallbackForFrameQueue(obj->frame_queue_);
-			CallNativeFunc(rs2_start_processing, &obj->error_, obj->syncer_, callback, &obj->error_);
-			obj->Wrap(info.This());
-
-			return info.This();
-		}
 	}
 
 	Napi::Value WaitForFrames(const CallbackInfo& info) {

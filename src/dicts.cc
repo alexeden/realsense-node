@@ -1,5 +1,5 @@
-#ifndef SENSOR_H
-#define SENSOR_H
+#ifndef DICTS_H
+#define DICTS_H
 
 #include "dict_base.cc"
 #include <librealsense2/hpp/rs_types.hpp>

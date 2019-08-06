@@ -1,12 +1,12 @@
 #ifndef FRAMESET_H
 #define FRAMESET_H
 
-#include <iostream>
-#include <librealsense2/hpp/rs_types.hpp>
-#include <napi.h>
 #include "frame.cc"
 #include "stream_profile_extractor.cc"
 #include "utils.cc"
+#include <iostream>
+#include <librealsense2/hpp/rs_types.hpp>
+#include <napi.h>
 using namespace Napi;
 
 class RSFrameSet : public ObjectWrap<RSFrameSet> {
@@ -79,26 +79,17 @@ class RSFrameSet : public ObjectWrap<RSFrameSet> {
 
 	Napi::Value Destroy(const CallbackInfo& info) {
 		auto unwrapped = ObjectWrap<RSFrameSet>::Unwrap(info[0].As<Object>());
-		// auto this = Nan::ObjectWrap::Unwrap<RSFrameSet>(info.Holder());
 		if (unwrapped) { unwrapped->DestroyMe(); }
 		return info.Env().Undefined();
 	}
 
-	// static void New(const CallbackInfo& info) {
-	// 	if (info.IsConstructCall()) {
-	// 		RSFrameSet* obj = new RSFrameSet(info);
-	// 		obj->Wrap(info.This());
-	// 		info.GetReturnValue().Set(info.This());
-	// 	}
-	// }
-
 	Napi::Value GetSize(const CallbackInfo& info) {
-		if (this && this->frames_) { return Number::New(info.Env(), this->frame_count_); }
+		if (this->frames_) { return Number::New(info.Env(), this->frame_count_); }
 		return Number::New(info.Env(), 0);
 	}
 
 	Napi::Value GetFrame(const CallbackInfo& info) {
-		if (!this || !this->frames_) return info.Env().Undefined();
+		if (!this->frames_) return info.Env().Undefined();
 
 		rs2_stream stream = static_cast<rs2_stream>(info[0].ToNumber().Int32Value());
 		auto stream_index = info[1].ToNumber().Int32Value();
@@ -134,7 +125,7 @@ class RSFrameSet : public ObjectWrap<RSFrameSet> {
 		auto stream_index = info[1].ToNumber().Int32Value();
 		auto target_frame = ObjectWrap<RSFrame>::Unwrap(info[2].ToObject());
 
-		if (!this || !this->frames_) return Boolean::New(info.Env(), false);
+		if (!this->frames_) return Boolean::New(info.Env(), false);
 
 		for (uint32_t i = 0; i < this->frame_count_; i++) {
 			rs2_frame* frame
@@ -158,7 +149,7 @@ class RSFrameSet : public ObjectWrap<RSFrameSet> {
 	}
 
 	Napi::Value IndexToStream(const CallbackInfo& info) {
-		if (!this || !this->frames_) return info.Env().Undefined();
+		if (!this->frames_) return info.Env().Undefined();
 
 		int32_t index = info[0].ToNumber().Int32Value();
 		rs2_frame* frame
@@ -186,7 +177,7 @@ class RSFrameSet : public ObjectWrap<RSFrameSet> {
 	}
 
 	Napi::Value IndexToStreamIndex(const CallbackInfo& info) {
-		if (!this || !this->frames_) return info.Env().Undefined();
+		if (!this->frames_) return info.Env().Undefined();
 
 		int32_t index = info[0].ToNumber().Int32Value();
 		rs2_frame* frame

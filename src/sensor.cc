@@ -1,8 +1,11 @@
 #ifndef SENSOR_H
 #define SENSOR_H
 
+#include "dicts.cc"
+#include "frame.cc"
 #include "main_thread_callback.cc"
 #include "options.cc"
+#include "syncer.cc"
 #include "utils.cc"
 #include <iostream>
 #include <librealsense2/hpp/rs_types.hpp>
@@ -55,7 +58,7 @@ class RSSensor
 		EscapableHandleScope scope(env);
 		Object instance = constructor.New({});
 
-		auto unwrapped  = ObjectWrap<RSSensor>::Unwrap(instance);
+		auto unwrapped	 = ObjectWrap<RSSensor>::Unwrap(instance);
 		unwrapped->sensor_ = sensor;
 
 		return scope.Escape(napi_value(instance)).ToObject();
@@ -209,7 +212,7 @@ class RSSensor
 
 	Napi::Value OpenStream(const CallbackInfo& info) {
 		auto profile = ObjectWrap<RSStreamProfile>::Unwrap(info[0].ToObject());
-		if (!profile) return;
+		if (!profile) return info.Env().Undefined();
 
 		CallNativeFunc(rs2_open, &this->error_, this->sensor_, profile->profile_, &this->error_);
 		return info.Env().Undefined();
@@ -240,10 +243,10 @@ class RSSensor
 			  rs2_stream_profile_list*>(rs2_get_stream_profiles, &this->error_, this->sensor_, &this->error_);
 			this->profile_list_ = list;
 		}
-		if (!list) return;
+		if (!list) return info.Env().Undefined();
 
 		int32_t size = GetNativeResult<int>(rs2_get_stream_profiles_count, &this->error_, list, &this->error_);
-		auto array = Array::New(info.Env());
+		auto array   = Array::New(info.Env());
 		for (int32_t i = 0; i < size; i++) {
 			rs2_stream_profile* profile
 			  = const_cast<rs2_stream_profile*>(rs2_get_stream_profile(list, i, &this->error_));
@@ -287,7 +290,7 @@ class RSSensor
 
 		CallNativeFunc(rs2_get_region_of_interest, &this->error_, this->sensor_, &minx, &miny, &maxx, &maxy, &this->error_);
 		if (this->error_) return info.Env().Undefined();
-		return RSRegionOfInterest(minx, miny, maxx, maxy).GetObject();
+		return RSRegionOfInterest(info.Env(), minx, miny, maxx, maxy).GetObject();
 	}
 
 	Napi::Value GetDepthScale(const CallbackInfo& info) {
