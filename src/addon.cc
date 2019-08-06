@@ -30,8 +30,16 @@ Value RegisterErrorCallback(const CallbackInfo& info) {
   return info.Env().Undefined();
 }
 
+Value Cleanup(const CallbackInfo& info) {
+  MainThreadCallback::Destroy();
+  ErrorUtil::ResetError();
+
+  return info.Env().Undefined();
+}
+
 
 Object Init(Env env, Object exports) {
+	exports.Set("cleanup", Function::New(env, Cleanup));
 	exports.Set("getError", Function::New(env, GetError));
 	exports.Set("getTime", Function::New(env, GetTime));
 	exports.Set("registerErrorCallback", Function::New(env, RegisterErrorCallback));
