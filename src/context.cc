@@ -1,12 +1,12 @@
 #ifndef CONTEXT_H
 #define CONTEXT_H
 
+#include "main_thread_callback.cc"
 #include <iostream>
 #include <librealsense2/h/rs_internal.h>
 #include <librealsense2/hpp/rs_types.hpp>
 #include <librealsense2/rs.h>
 #include <napi.h>
-#include "main_thread_callback.cc"
 // #include "sensor.cc"
 #include "device_list.cc"
 #include "utils.cc"
@@ -60,11 +60,8 @@ class RSContext : public ObjectWrap<RSContext> {
 	  , ctx_(nullptr)
 	  , error_(nullptr)
 	  , mode_(RS2_RECORDING_MODE_BLANK_FRAMES) {
-		this->type_ = info[0].IsNumber()
-			? static_cast<ContextType>(info[0].As<Number>().Uint32Value())
-			: kNormal;
+		this->type_ = info[0].IsNumber() ? static_cast<ContextType>(info[0].As<Number>().Uint32Value()) : kNormal;
 
-		ContextType type = kNormal;
 		if (info.Length()) {
 			std::string std_type_str = info[0].As<String>().ToString();
 			if (!std_type_str.compare("recording"))
@@ -72,14 +69,43 @@ class RSContext : public ObjectWrap<RSContext> {
 			else if (!std_type_str.compare("playback"))
 				this->type_ = kPlayback;
 		}
-		if (type == kRecording || type == kPlayback) {
+		if (this->type_ == kRecording || this->type_ == kPlayback) {
 			std::string file	= info[1].As<String>().ToString();
 			std::string section = info[2].As<String>().ToString();
 			this->file_name_	= file;
 			this->section_		= section;
 		}
-		if (type == kRecording)
+		if (this->type_ == kRecording)
 			this->mode_ = static_cast<rs2_recording_mode>(info[3].As<Number>().ToNumber().Uint32Value());
+
+		MainThreadCallback::Init();
+
+		// std::cerr << "Context type is " << this->type_ << std::endl;
+		switch (this->type_) {
+			case kRecording:
+				this->ctx_ = GetNativeResult<rs2_context*>(
+				  rs2_create_recording_context,
+				  &this->error_,
+				  RS2_API_VERSION,
+				  this->file_name_.c_str(),
+				  this->section_.c_str(),
+				  this->mode_,
+				  &this->error_);
+				break;
+			case kPlayback:
+				this->ctx_ = GetNativeResult<rs2_context*>(
+				  rs2_create_mock_context,
+				  &this->error_,
+				  RS2_API_VERSION,
+				  this->file_name_.c_str(),
+				  this->section_.c_str(),
+				  &this->error_);
+				break;
+			default:
+				this->ctx_
+				  = GetNativeResult<rs2_context*>(rs2_create_context, &this->error_, RS2_API_VERSION, &this->error_);
+				break;
+		}
 	}
 
 	~RSContext() {
@@ -130,6 +156,7 @@ class RSContext : public ObjectWrap<RSContext> {
 
 	Napi::Value Destroy(const CallbackInfo& info) {
 		this->DestroyMe();
+		std::cerr << "RSContext::Destroy executed" << std::endl;
 		return info.Env().Undefined();
 	}
 
@@ -142,8 +169,8 @@ class RSContext : public ObjectWrap<RSContext> {
 
 	// Napi::Value LoadDeviceFile(const CallbackInfo& info) {
 	// 	std::string device_file = info[0].As<String>().ToString();
-	// 	auto dev = GetNativeResult<rs2_device*>(rs2_context_add_device, &this->error_, this->ctx_, device_file, &this->error_);
-	// 	if (!dev) return;
+	// 	auto dev = GetNativeResult<rs2_device*>(rs2_context_add_device, &this->error_, this->ctx_, device_file,
+	// &this->error_); 	if (!dev) return;
 
 	// 	auto jsobj = RSDevice::NewInstance(dev, RSDevice::kPlaybackDevice);
 	// 	return jsobj;
@@ -165,9 +192,9 @@ class RSContext : public ObjectWrap<RSContext> {
 	// }
 
 	Napi::Value QueryDevices(const CallbackInfo& info) {
-		std::cerr << "Querying devices" << std::endl;
 		auto dev_list = GetNativeResult<rs2_device_list*>(rs2_query_devices, &this->error_, this->ctx_, &this->error_);
 
+		std::cerr << "Got device list: " << dev_list << std::endl;
 		return RSDeviceList::NewInstance(info.Env(), dev_list);
 	}
 

@@ -1,6 +1,7 @@
 #ifndef MAINTHREADCALLBACK_H
 #define MAINTHREADCALLBACK_H
 
+#include <iostream>
 #include <list>
 #include <napi.h>
 #include <uv.h>
@@ -64,6 +65,7 @@ class MainThreadCallback {
 	MainThreadCallback() {
 		async_ = static_cast<uv_async_t*>(malloc(sizeof(uv_async_t)));
 		uv_async_init(uv_default_loop(), async_, AsyncProc);
+		// std::cerr << "MainThreadCallback inited" << std::endl;
 	}
 
 	static void AsyncProc(uv_async_t* async) {
