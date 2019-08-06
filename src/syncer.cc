@@ -4,6 +4,7 @@
 #include <iostream>
 #include <librealsense2/hpp/rs_types.hpp>
 #include <napi.h>
+#include "frameset.cc"
 using namespace Napi;
 
 class RSSyncer : public ObjectWrap<RSSyncer> {
