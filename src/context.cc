@@ -134,7 +134,8 @@ class RSContext : public ObjectWrap<RSContext> {
 	}
 
 	Napi::Value OnDevicesChanged(const CallbackInfo& info) {
-		this->device_changed_callback_ = info[0].As<Function>();
+		this->device_changed_callback_ = Persistent(info[0].As<Function>());
+		this->device_changed_callback_.SuppressDestruct();
 		// this->device_changed_callback_name_ = info[0].As<String>().ToString();
 		this->RegisterDevicesChangedCallbackMethod();
 
@@ -175,7 +176,7 @@ class RSContext : public ObjectWrap<RSContext> {
   private:
 	static FunctionReference constructor;
 
-	Function device_changed_callback_;
+	FunctionReference device_changed_callback_;
 	rs2_context* ctx_;
 	rs2_error* error_;
 	// std::string device_changed_callback_name_;
