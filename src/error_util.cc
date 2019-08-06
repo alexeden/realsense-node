@@ -1,6 +1,7 @@
 #ifndef ERRORUTIL_H
 #define ERRORUTIL_H
 
+#include <iostream>
 #include <string>
 #include <napi.h>
 #include <librealsense2/hpp/rs_types.hpp>

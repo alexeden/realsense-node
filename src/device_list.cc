@@ -31,17 +31,14 @@ class RSDeviceList : public ObjectWrap<RSDeviceList> {
 	}
 
 	static Object NewInstance(Napi::Env env, rs2_device_list* list) {
+		// std::cerr << __LINE__ << " RSDeviceList::NewInstance got dev_list: " << list << std::endl;
 		EscapableHandleScope scope(env);
 		Object instance = constructor.New({});
 
+		auto unwrapped = ObjectWrap<RSDeviceList>::Unwrap(instance);
+		unwrapped->list_ = list;
+
 		return scope.Escape(napi_value(instance)).ToObject();
-		// Nan::EscapableHandleScope scope;
-		// v8::Local<v8::Function> cons   = Nan::New<v8::Function>(constructor);
-		// v8::Local<v8::Context> context = v8::Isolate::GetCurrent()->GetCurrentContext();
-		// Object instance				   = cons->NewInstance(context, 0, nullptr).ToLocalChecked();
-		// auto me						   = ObjectWrap<RSDeviceList>::Unwrap(instance);
-		// me->list_					   = list;
-		// return scope.Escape(instance);
 	}
 
 	RSDeviceList(const CallbackInfo& info)
