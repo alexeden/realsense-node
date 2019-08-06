@@ -10,5 +10,9 @@ console.log('Got device list');
 console.log('Getting device count...')
 console.log(deviceList.length());
 
-addon.cleanup();
+console.log(ctx.onDevicesChanged((...args) => {
+  console.log('devices changed event!', ...args);
+}));
+
+// addon.cleanup();
 console.log('Done!');
