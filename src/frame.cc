@@ -160,7 +160,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		  rs2_stream_profile*>(rs2_clone_stream_profile, &this->error_, profile_org, stream, index, format, &this->error_);
 		if (!profile) return info.Env().Undefined();
 
-		return RSStreamProfile::NewInstance(profile, true);
+		return RSStreamProfile::NewInstance(info.Env(), profile, true);
 	}
 
 	Napi::Value GetData(const CallbackInfo& info) {
