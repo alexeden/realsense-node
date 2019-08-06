@@ -1,11 +1,11 @@
 #ifndef FRAME_H
 #define FRAME_H
 
+#include "stream_profile.cc"
 #include "utils.cc"
 #include <iostream>
 #include <librealsense2/hpp/rs_types.hpp>
 #include <napi.h>
-#include "stream_profile.cc"
 using namespace Napi;
 
 class RSFrame : public ObjectWrap<RSFrame> {
@@ -184,9 +184,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		  = GetNativeResult<int>(rs2_get_frame_stride_in_bytes, &this->error_, this->frame_, &this->error_);
 		const auto height   = GetNativeResult<int>(rs2_get_frame_height, &this->error_, this->frame_, &this->error_);
 		const size_t length = stride * height;
-		if (buffer && array_buffer.ByteLength() >= length) {
-			memcpy(array_buffer.Data(), buffer, length);
-		}
+		if (buffer && array_buffer.ByteLength() >= length) { memcpy(array_buffer.Data(), buffer, length); }
 		return info.Env().Undefined();
 	}
 
