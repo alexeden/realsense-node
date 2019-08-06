@@ -1,10 +1,12 @@
 #ifndef FRAMESET_H
 #define FRAMESET_H
 
-#include "utils.cc"
 #include <iostream>
 #include <librealsense2/hpp/rs_types.hpp>
 #include <napi.h>
+#include "frame.cc"
+#include "stream_profile_extractor.cc"
+#include "utils.cc"
 using namespace Napi;
 
 class RSFrameSet : public ObjectWrap<RSFrameSet> {
@@ -106,7 +108,7 @@ class RSFrameSet : public ObjectWrap<RSFrameSet> {
 			  = GetNativeResult<rs2_frame*>(rs2_extract_frame, &this->error_, this->frames_, 0, &this->error_);
 			if (!frame) return info.Env().Undefined();
 
-			return RSFrame::NewInstance(frame);
+			return RSFrame::NewInstance(info.Env(), frame);
 		}
 
 		for (uint32_t i = 0; i < this->frame_count_; i++) {
@@ -117,10 +119,10 @@ class RSFrameSet : public ObjectWrap<RSFrameSet> {
 			const rs2_stream_profile* profile = GetNativeResult<
 			  const rs2_stream_profile*>(rs2_get_frame_stream_profile, &this->error_, frame, &this->error_);
 			if (profile) {
-				StreamProfileExtrator extrator(profile);
+				StreamProfileExtractor extrator(profile);
 				if (
 				  extrator.stream_ == stream && (!stream_index || (stream_index && stream_index == extrator.index_))) {
-					return RSFrame::NewInstance(frame);
+					return RSFrame::NewInstance(info.Env(), frame);
 				}
 			}
 			rs2_release_frame(frame);
@@ -142,7 +144,7 @@ class RSFrameSet : public ObjectWrap<RSFrameSet> {
 			const rs2_stream_profile* profile = GetNativeResult<
 			  const rs2_stream_profile*>(rs2_get_frame_stream_profile, &this->error_, frame, &this->error_);
 			if (profile) {
-				StreamProfileExtrator extrator(profile);
+				StreamProfileExtractor extrator(profile);
 				if (
 				  extrator.stream_ == stream && (!stream_index || (stream_index && stream_index == extrator.index_))) {
 					target_frame->Replace(frame);
