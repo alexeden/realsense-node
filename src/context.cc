@@ -1,14 +1,15 @@
 #ifndef CONTEXT_H
 #define CONTEXT_H
 
-#include "main_thread_callback.cc"
-// #include "sensor.cc"
-#include "device_list.cc"
-#include "utils.cc"
+#include <iostream>
 #include <librealsense2/h/rs_internal.h>
 #include <librealsense2/hpp/rs_types.hpp>
 #include <librealsense2/rs.h>
 #include <napi.h>
+#include "main_thread_callback.cc"
+// #include "sensor.cc"
+#include "device_list.cc"
+#include "utils.cc"
 
 using namespace Napi;
 
@@ -37,7 +38,7 @@ class RSContext : public ObjectWrap<RSContext> {
 
 		constructor = Napi::Persistent(func);
 		constructor.SuppressDestruct();
-		exports.Set("RSDevice", func);
+		exports.Set("RSContext", func);
 
 		return exports;
 	}
@@ -164,6 +165,7 @@ class RSContext : public ObjectWrap<RSContext> {
 	// }
 
 	Napi::Value QueryDevices(const CallbackInfo& info) {
+		std::cerr << "Querying devices" << std::endl;
 		auto dev_list = GetNativeResult<rs2_device_list*>(rs2_query_devices, &this->error_, this->ctx_, &this->error_);
 
 		return RSDeviceList::NewInstance(info.Env(), dev_list);
