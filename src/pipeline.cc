@@ -2,6 +2,7 @@
 #define PIPELINE_H
 
 #include "context.cc"
+#include "pipeline_profile.cc"
 #include <librealsense2/hpp/rs_types.hpp>
 #include <napi.h>
 

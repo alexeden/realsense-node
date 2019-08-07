@@ -1,180 +1,152 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include "utils.cc"
 #include <librealsense2/hpp/rs_types.hpp>
 #include <napi.h>
 
-class RSConfig : public Nan::ObjectWrap  {
- public:
-  static void Init(v8::Local<v8::Object> exports) {
-    v8::Local<v8::FunctionTemplate> tpl = Nan::New<v8::FunctionTemplate>(New);
-    tpl->SetClassName(Nan::New("RSConfig").ToLocalChecked());
-    tpl->InstanceTemplate()->SetInternalFieldCount(1);
+using namespace Napi;
 
-    Nan::SetPrototypeMethod(tpl, "destroy", Destroy);
-    Nan::SetPrototypeMethod(tpl, "enableStream", EnableStream);
-    Nan::SetPrototypeMethod(tpl, "enableAllStreams", EnableAllStreams);
-    Nan::SetPrototypeMethod(tpl, "enableDevice", EnableDevice);
-    Nan::SetPrototypeMethod(tpl, "enableDeviceFromFile", EnableDeviceFromFile);
-    Nan::SetPrototypeMethod(tpl, "enableRecordToFile", EnableRecordToFile);
-    Nan::SetPrototypeMethod(tpl, "disableStream", DisableStream);
-    Nan::SetPrototypeMethod(tpl, "disableAllStreams", DisableAllStreams);
-    Nan::SetPrototypeMethod(tpl, "resolve", Resolve);
-    Nan::SetPrototypeMethod(tpl, "canResolve", CanResolve);
-    Nan::SetPrototypeMethod(tpl, "enableDeviceFromFileRepeatOption",
-        EnableDeviceFromFileRepeatOption);
+class RSConfig : public ObjectWrap<RSConfig> {
+  public:
+	static Object Init(Napi::Env env, Object exports) {
+		Napi::Function func = DefineClass(
+		  env,
+		  "RSConfig",
+		  {
+			InstanceMethod("destroy", &RSConfig::Destroy),
+			InstanceMethod("enableStream", &RSConfig::EnableStream),
+			InstanceMethod("enableAllStreams", &RSConfig::EnableAllStreams),
+			InstanceMethod("enableDevice", &RSConfig::EnableDevice),
+			InstanceMethod("enableDeviceFromFile", &RSConfig::EnableDeviceFromFile),
+			InstanceMethod("enableRecordToFile", &RSConfig::EnableRecordToFile),
+			InstanceMethod("disableStream", &RSConfig::DisableStream),
+			InstanceMethod("disableAllStreams", &RSConfig::DisableAllStreams),
+			InstanceMethod("resolve", &RSConfig::Resolve),
+			InstanceMethod("canResolve", &RSConfig::CanResolve),
+			InstanceMethod("enableDeviceFromFileRepeatOption", &RSConfig::EnableDeviceFromFileRepeatOption),
 
-    constructor_.Reset(tpl->GetFunction());
-    exports->Set(Nan::New("RSConfig").ToLocalChecked(), tpl->GetFunction());
-  }
+		  });
 
-  static v8::Local<v8::Object> NewInstance() {
-    Nan::EscapableHandleScope scope;
+		constructor = Napi::Persistent(func);
+		constructor.SuppressDestruct();
+		exports.Set("RSConfig", func);
 
-    v8::Local<v8::Function> cons = Nan::New<v8::Function>(constructor_);
-    v8::Local<v8::Context> context =
-        v8::Isolate::GetCurrent()->GetCurrentContext();
+		return exports;
+	}
 
-    v8::Local<v8::Object> instance =
-        cons->NewInstance(context, 0, nullptr).ToLocalChecked();
+	static Object NewInstance(Napi::Env env) {
+		EscapableHandleScope scope(env);
+		Object instance = constructor.New({});
 
-    return scope.Escape(instance);
-  }
+		return scope.Escape(napi_value(instance)).ToObject();
+	}
 
- private:
-  RSConfig() : config_(nullptr), error_(nullptr) {}
+	RSConfig(const CallbackInfo& info)
+	  : ObjectWrap<RSConfig>(info)
+	  , config_(nullptr)
+	  , error_(nullptr) {
+		this->config_ = rs2_create_config(&this->error_);
+	}
 
-  ~RSConfig() {
-    DestroyMe();
-  }
+	~RSConfig() {
+		DestroyMe();
+	}
 
-  void DestroyMe() {
-    if (error_) rs2_free_error(error_);
-    error_ = nullptr;
-    if (config_) rs2_delete_config(config_);
-    config_ = nullptr;
-  }
+  private:
+	void DestroyMe() {
+		if (error_) rs2_free_error(error_);
+		error_ = nullptr;
+		if (config_) rs2_delete_config(config_);
+		config_ = nullptr;
+	}
 
-  static NAN_METHOD(Destroy) {
-    auto me = Nan::ObjectWrap::Unwrap<RSConfig>(info.Holder());
-    if (me) me->DestroyMe();
-    info.GetReturnValue().Set(Nan::Undefined());
-  }
+	Napi::Value Destroy(const CallbackInfo& info) {
+		this->DestroyMe();
+		return info.Env().Undefined();
+	}
 
-  static void New(const Nan::FunctionCallbackInfo<v8::Value>& info) {
-    if (info.IsConstructCall()) {
-      RSConfig* obj = new RSConfig();
-      obj->config_ = rs2_create_config(&obj->error_);
-      obj->Wrap(info.This());
-      info.GetReturnValue().Set(info.This());
-    }
-  }
+	// TODO(halton): added all the overloads
+	Napi::Value EnableStream(const CallbackInfo& info) {
+		auto stream	= info[0].ToNumber().Int32Value();
+		auto index	 = info[1].ToNumber().Int32Value();
+		auto width	 = info[2].ToNumber().Int32Value();
+		auto height	= info[3].ToNumber().Int32Value();
+		auto format	= info[4].ToNumber().Int32Value();
+		auto framerate = info[5].ToNumber().Int32Value();
+		if (!this->config_) return info.Env().Undefined();
 
-  // TODO(halton): added all the overloads
-  static NAN_METHOD(EnableStream) {
-    info.GetReturnValue().Set(Nan::Undefined());
-    auto me = Nan::ObjectWrap::Unwrap<RSConfig>(info.Holder());
-    auto stream = info[0]->IntegerValue();
-    auto index = info[1]->IntegerValue();
-    auto width = info[2]->IntegerValue();
-    auto height = info[3]->IntegerValue();
-    auto format = info[4]->IntegerValue();
-    auto framerate = info[5]->IntegerValue();
-    if (!me || !me->config_) return;
+		CallNativeFunc(
+		  rs2_config_enable_stream,
+		  &this->error_,
+		  this->config_,
+		  (rs2_stream) stream,
+		  index,
+		  width,
+		  height,
+		  (rs2_format) format,
+		  framerate,
+		  &this->error_);
+		return info.Env().Undefined();
+	}
 
-    CallNativeFunc(rs2_config_enable_stream, &me->error_, me->config_,
-      (rs2_stream)stream,
-      index,
-      width,
-      height,
-      (rs2_format)format,
-      framerate,
-      &me->error_);
-  }
+	Napi::Value EnableAllStreams(const CallbackInfo& info) {
+		CallNativeFunc(rs2_config_enable_all_stream, &this->error_, this->config_, &this->error_);
+		return info.Env().Undefined();
+	}
 
-  static NAN_METHOD(EnableAllStreams) {
-    info.GetReturnValue().Set(Nan::Undefined());
-    auto me = Nan::ObjectWrap::Unwrap<RSConfig>(info.Holder());
-    if (!me) return;
+	Napi::Value EnableDevice(const CallbackInfo& info) {
+		auto device = std::string(info[0].ToString());
+		CallNativeFunc(rs2_config_enable_device, &this->error_, this->config_, device.c_str(), &this->error_);
+		return info.Env().Undefined();
+	}
 
-    CallNativeFunc(rs2_config_enable_all_stream, &me->error_, me->config_,
-        &me->error_);
-  }
+	Napi::Value EnableDeviceFromFile(const CallbackInfo& info) {
+		auto device_file = std::string(info[0].ToString());
+		CallNativeFunc(rs2_config_enable_device_from_file, &this->error_, this->config_, device_file.c_str(), &this->error_);
+		return info.Env().Undefined();
+	}
 
-  static NAN_METHOD(EnableDevice) {
-    info.GetReturnValue().Set(Nan::Undefined());
-    auto me = Nan::ObjectWrap::Unwrap<RSConfig>(info.Holder());
-    if (!me) return;
+	Napi::Value EnableDeviceFromFileRepeatOption(const CallbackInfo& info) {
+		auto device_file = std::string(info[0].ToString());
+		auto repeat		 = info[1].ToBoolean();
+		CallNativeFunc(
+		  rs2_config_enable_device_from_file_repeat_option,
+		  &this->error_,
+		  this->config_,
+		  device_file.c_str(),
+		  repeat,
+		  &this->error_);
+		return info.Env().Undefined();
+	}
 
-    auto device = info[0]->ToString();
-    v8::String::Utf8Value value(device);
-    CallNativeFunc(rs2_config_enable_device, &me->error_, me->config_, *value,
-        &me->error_);
-  }
+	Napi::Value EnableRecordToFile(const CallbackInfo& info) {
+		auto device_file = std::string(info[0].ToString());
+		CallNativeFunc(rs2_config_enable_record_to_file, &this->error_, this->config_, device_file.c_str(), &this->error_);
+		return info.Env().Undefined();
+	}
 
-  static NAN_METHOD(EnableDeviceFromFile) {
-    info.GetReturnValue().Set(Nan::Undefined());
-    auto me = Nan::ObjectWrap::Unwrap<RSConfig>(info.Holder());
-    if (!me) return;
+	Napi::Value DisableStream(const CallbackInfo& info) {
+		auto stream = info[0].ToNumber().Int32Value();
+		CallNativeFunc(rs2_config_disable_stream, &this->error_, this->config_, (rs2_stream) stream, &this->error_);
+		return info.Env().Undefined();
+	}
 
-    auto device_file = info[0]->ToString();
-    v8::String::Utf8Value value(device_file);
-    CallNativeFunc(rs2_config_enable_device_from_file, &me->error_, me->config_,
-        *value, &me->error_);
-  }
+	Napi::Value DisableAllStreams(const CallbackInfo& info) {
+		CallNativeFunc(rs2_config_disable_all_streams, &this->error_, this->config_, &this->error_);
+		return info.Env().Undefined();
+	}
+	Napi::Value Resolve(const CallbackInfo& info) {}
+	Napi::Value CanResolve(const CallbackInfo& info) {}
 
-  static NAN_METHOD(EnableDeviceFromFileRepeatOption) {
-    info.GetReturnValue().Set(Nan::Undefined());
-    auto me = Nan::ObjectWrap::Unwrap<RSConfig>(info.Holder());
-    if (!me) return;
+  private:
+	static FunctionReference constructor;
+	friend class RSPipeline;
 
-    auto device_file = info[0]->ToString();
-    auto repeat = info[1]->BooleanValue();
-    v8::String::Utf8Value value(device_file);
-    CallNativeFunc(rs2_config_enable_device_from_file_repeat_option,
-        &me->error_, me->config_, *value, repeat, &me->error_);
-  }
-
-  static NAN_METHOD(EnableRecordToFile) {
-    info.GetReturnValue().Set(Nan::Undefined());
-    auto me = Nan::ObjectWrap::Unwrap<RSConfig>(info.Holder());
-    if (!me) return;
-
-    auto device_file = info[0]->ToString();
-    v8::String::Utf8Value value(device_file);
-    CallNativeFunc(rs2_config_enable_record_to_file, &me->error_, me->config_,
-        *value, &me->error_);
-  }
-
-  static NAN_METHOD(DisableStream) {
-    info.GetReturnValue().Set(Nan::Undefined());
-    auto me = Nan::ObjectWrap::Unwrap<RSConfig>(info.Holder());
-    if (!me) return;
-
-    auto stream = info[0]->IntegerValue();
-    CallNativeFunc(rs2_config_disable_stream, &me->error_, me->config_,
-        (rs2_stream)stream, &me->error_);
-  }
-
-  static NAN_METHOD(DisableAllStreams) {
-    info.GetReturnValue().Set(Nan::Undefined());
-    auto me = Nan::ObjectWrap::Unwrap<RSConfig>(info.Holder());
-    if (!me) return;
-
-    CallNativeFunc(rs2_config_disable_all_streams, &me->error_, me->config_,
-        &me->error_);
-  }
-  static NAN_METHOD(Resolve);
-  static NAN_METHOD(CanResolve);
-
- private:
-  static Nan::Persistent<v8::Function> constructor_;
-  friend class RSPipeline;
-
-  rs2_config* config_;
-  rs2_error* error_;
+	rs2_config* config_;
+	rs2_error* error_;
 };
 
-Nan::Persistent<v8::Function> RSConfig::constructor_;
+Napi::FunctionReference RSConfig::constructor;
 
 #endif

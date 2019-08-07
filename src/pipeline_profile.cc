@@ -1,6 +1,7 @@
 #ifndef PIPELINE_PROFILE_H
 #define PIPELINE_PROFILE_H
 
+#include "config.cc"
 #include "device.cc"
 #include "utils.cc"
 #include <librealsense2/hpp/rs_types.hpp>
@@ -69,14 +70,15 @@ class RSPipelineProfile : public ObjectWrap<RSPipelineProfile> {
 		int32_t size = GetNativeResult<int32_t>(rs2_get_stream_profiles_count, &this->error_, list, &this->error_);
 		if (this->error_) return info.Env().Undefined();
 
-		v8::Local<v8::Array> array = Nan::New<v8::Array>(size);
+		auto array = Array::New(info.Env(), size);
 		for (int32_t i = 0; i < size; i++) {
 			rs2_stream_profile* profile = const_cast<rs2_stream_profile*>(
 			  GetNativeResult<
 				const rs2_stream_profile*>(rs2_get_stream_profile, &this->error_, list, i, &this->error_));
-			array->Set(i, RSStreamProfile::NewInstance(profile));
+			array.Set(i, RSStreamProfile::NewInstance(info.Env(), profile));
 		}
-		info.GetReturnValue().Set(array);
+
+		return array;
 	}
 
 	Napi::Value GetDevice(const CallbackInfo& info) {
