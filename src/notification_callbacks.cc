@@ -30,7 +30,7 @@ class NotificationCallbackInfo : public MainThreadCallbackInfo {
 	virtual void Run() {
 	}
 
-  private:
+//   private:
 	std::string desc_;
 	rs2_time_t time_;
 	rs2_log_severity severity_;
