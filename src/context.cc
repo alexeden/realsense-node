@@ -1,16 +1,15 @@
 #ifndef CONTEXT_H
 #define CONTEXT_H
 
+#include "device.cc"
+#include "device_list.cc"
+#include "main_thread_callback.cc"
+#include "utils.cc"
 #include <iostream>
 #include <librealsense2/h/rs_internal.h>
 #include <librealsense2/hpp/rs_types.hpp>
 #include <librealsense2/rs.h>
 #include <napi.h>
-// #include "sensor.cc"
-#include "device_list.cc"
-#include "main_thread_callback.cc"
-// #include "devices_changed_callback.cc"
-#include "utils.cc"
 
 using namespace Napi;
 
@@ -27,13 +26,12 @@ class RSContext : public ObjectWrap<RSContext> {
 		  env,
 		  "RSContext",
 		  {
+			InstanceMethod("createDeviceFromSensor", &RSContext::CreateDeviceFromSensor),
 			InstanceMethod("destroy", &RSContext::Destroy),
-			InstanceMethod("queryDevices", &RSContext::QueryDevices),
+			InstanceMethod("loadDeviceFile", &RSContext::LoadDeviceFile),
 			InstanceMethod("onDevicesChanged", &RSContext::OnDevicesChanged),
-			// InstanceMethod("loadDeviceFile", &RSContext::LoadDeviceFile),
-			// InstanceMethod("unloadDeviceFile", &RSContext::UnloadDeviceFile),
-			// InstanceMethod("createDeviceFromSensor", &RSContext::CreateDeviceFromSensor),
-
+			InstanceMethod("queryDevices", &RSContext::QueryDevices),
+			InstanceMethod("unloadDeviceFile", &RSContext::UnloadDeviceFile),
 		  });
 
 		constructor = Napi::Persistent(func);
@@ -56,7 +54,6 @@ class RSContext : public ObjectWrap<RSContext> {
 	}
 
 	RSContext(const CallbackInfo& info)
-	  // RSContext(ContextType type = kNormal)
 	  : ObjectWrap<RSContext>(info)
 	  , ctx_(nullptr)
 	  , error_(nullptr)
@@ -142,29 +139,30 @@ class RSContext : public ObjectWrap<RSContext> {
 		return info.This();
 	}
 
-	// Napi::Value LoadDeviceFile(const CallbackInfo& info) {
-	// 	std::string device_file = info[0].As<String>().ToString();
-	// 	auto dev = GetNativeResult<rs2_device*>(rs2_context_add_device, &this->error_, this->ctx_, device_file,
-	// &this->error_); 	if (!dev) return;
+	Napi::Value LoadDeviceFile(const CallbackInfo& info) {
+		std::string device_file = info[0].As<String>().ToString();
+		auto dev
+		  = GetNativeResult<rs2_device*>(rs2_context_add_device, &this->error_, this->ctx_, device_file, &this->error_);
+		if (!dev) return;
 
-	// 	auto jsobj = RSDevice::NewInstance(dev, RSDevice::kPlaybackDevice);
-	// 	return jsobj;
-	// }
+		auto jsobj = RSDevice::NewInstance(info.Env(), dev, RSDevice::kPlaybackDevice);
+		return jsobj;
+	}
 
-	// Napi::Value UnloadDeviceFile(const CallbackInfo& info) {
-	// 	std::string device_file = info[0].As<String>().ToString();
-	// 	CallNativeFunc(rs2_context_remove_device, &this->error_, this->ctx_, device_file, &this->error_);
-	// }
+	Napi::Value UnloadDeviceFile(const CallbackInfo& info) {
+		std::string device_file = info[0].As<String>().ToString();
+		CallNativeFunc(rs2_context_remove_device, &this->error_, this->ctx_, device_file, &this->error_);
+	}
 
-	// Napi::Value CreateDeviceFromSensor(const CallbackInfo& info) {
-	// 	auto sensor = ObjectWrap<RSSensor>::Unwrap(info[0].As<Object>());
+	Napi::Value CreateDeviceFromSensor(const CallbackInfo& info) {
+		auto sensor = ObjectWrap<RSSensor>::Unwrap(info[0].As<Object>());
 
-	// 	rs2_error* error = nullptr;
-	// 	auto dev		 = GetNativeResult<rs2_device*>(rs2_create_device_from_sensor, &error, sensor->sensor_, &error);
-	// 	if (!dev) return;
+		rs2_error* error = nullptr;
+		auto dev		 = GetNativeResult<rs2_device*>(rs2_create_device_from_sensor, &error, sensor->sensor_, &error);
+		if (!dev) return;
 
-	// 	return RSDevice::NewInstance(dev);
-	// }
+		return RSDevice::NewInstance(info.Env(), dev);
+	}
 
 	Napi::Value QueryDevices(const CallbackInfo& info) {
 		auto dev_list = GetNativeResult<rs2_device_list*>(rs2_query_devices, &this->error_, this->ctx_, &this->error_);
@@ -179,7 +177,7 @@ class RSContext : public ObjectWrap<RSContext> {
 	FunctionReference device_changed_callback_;
 	rs2_context* ctx_;
 	rs2_error* error_;
-	// std::string device_changed_callback_name_;
+	std::string device_changed_callback_name_;
 	ContextType type_;
 	std::string file_name_;
 	std::string section_;
