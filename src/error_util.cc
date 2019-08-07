@@ -1,11 +1,11 @@
 #ifndef ERRORUTIL_H
 #define ERRORUTIL_H
 
-#include <iostream>
-#include <string>
-#include <napi.h>
-#include <librealsense2/hpp/rs_types.hpp>
 #include "dict_base.cc"
+#include <iostream>
+#include <librealsense2/hpp/rs_types.hpp>
+#include <napi.h>
+#include <string>
 
 using namespace Napi;
 
@@ -68,7 +68,7 @@ class ErrorUtil {
 	 */
 	static void UpdateJSErrorCallback(const CallbackInfo& info) {
 		singleton_->js_error_container_.Reset(info[0].As<Object>());
-		auto value = std::string(info[1].As<String>());
+		auto value							= std::string(info[1].As<String>());
 		singleton_->js_error_callback_name_ = value;
 	}
 
@@ -80,10 +80,13 @@ class ErrorUtil {
 		auto msg		 = std::string(rs2_get_error_message(err));
 		bool recoverable = false;
 
-		if (
-		  type == RS2_EXCEPTION_TYPE_INVALID_VALUE || type == RS2_EXCEPTION_TYPE_WRONG_API_CALL_SEQUENCE
-		  || type == RS2_EXCEPTION_TYPE_NOT_IMPLEMENTED) {
-			recoverable = true;
+		switch (type) {
+			case RS2_EXCEPTION_TYPE_INVALID_VALUE:
+			case RS2_EXCEPTION_TYPE_WRONG_API_CALL_SEQUENCE:
+			case RS2_EXCEPTION_TYPE_NOT_IMPLEMENTED:
+				recoverable = true;
+				break;
+			default: break;
 		}
 
 		singleton_->MarkError(recoverable, msg, function);
