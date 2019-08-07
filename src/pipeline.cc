@@ -1,46 +1,49 @@
 #ifndef PIPELINE_H
 #define PIPELINE_H
 
+#include "context.cc"
 #include <librealsense2/hpp/rs_types.hpp>
 #include <napi.h>
 
 using namespace Napi;
 
-class RSPipeline : public Nan::ObjectWrap {
+class RSPipeline : public ObjectWrap<RSPipeline> {
   public:
-	static void Init(v8::Local<v8::Object> exports) {
-		v8::Local<v8::FunctionTemplate> tpl = Nan::New<v8::FunctionTemplate>(New);
-		tpl->SetClassName(Nan::New("RSPipeline").ToLocalChecked());
-		tpl->InstanceTemplate()->SetInternalFieldCount(1);
+	static Object Init(Napi::Env env, Object exports) {
+		Napi::Function func = DefineClass(
+		  env,
+		  "RSPipeline",
+		  {
+			InstanceMethod("start", &RSPipeline::Start),
+			InstanceMethod("startWithConfig", &RSPipeline::StartWithConfig),
+			InstanceMethod("stop", &RSPipeline::Stop),
+			InstanceMethod("waitForFrames", &RSPipeline::WaitForFrames),
+			InstanceMethod("pollForFrames", &RSPipeline::PollForFrames),
+			InstanceMethod("getActiveProfile", &RSPipeline::GetActiveProfile),
+			InstanceMethod("create", &RSPipeline::Create),
+			InstanceMethod("destroy", &RSPipeline::Destroy),
+		  }
+		);
 
-		Nan::SetPrototypeMethod(tpl, "start", Start);
-		Nan::SetPrototypeMethod(tpl, "startWithConfig", StartWithConfig);
-		Nan::SetPrototypeMethod(tpl, "stop", Stop);
-		Nan::SetPrototypeMethod(tpl, "waitForFrames", WaitForFrames);
-		Nan::SetPrototypeMethod(tpl, "pollForFrames", PollForFrames);
-		Nan::SetPrototypeMethod(tpl, "getActiveProfile", GetActiveProfile);
-		Nan::SetPrototypeMethod(tpl, "create", Create);
-		Nan::SetPrototypeMethod(tpl, "destroy", Destroy);
+		constructor = Napi::Persistent(func);
+		constructor.SuppressDestruct();
+		exports.Set("RSPipeline", func);
 
-		constructor_.Reset(tpl->GetFunction());
-		exports->Set(Nan::New("RSPipeline").ToLocalChecked(), tpl->GetFunction());
+		return exports;
 	}
 
-	static v8::Local<v8::Object> NewInstance() {
-		Nan::EscapableHandleScope scope;
+	static Object NewInstance(Napi::Env env) {
+		EscapableHandleScope scope(env);
+		Object instance = constructor.New({});
 
-		v8::Local<v8::Function> cons   = Nan::New<v8::Function>(constructor_);
-		v8::Local<v8::Context> context = v8::Isolate::GetCurrent()->GetCurrentContext();
-
-		v8::Local<v8::Object> instance = cons->NewInstance(context, 0, nullptr).ToLocalChecked();
-		return scope.Escape(instance);
+		return scope.Escape(napi_value(instance)).ToObject();
 	}
 
-  private:
 	friend class RSConfig;
 
-	RSPipeline()
-	  : pipeline_(nullptr)
+	RSPipeline(const CallbackInfo& info)
+	  : ObjectWrap<RSPipeline>(info)
+	  , pipeline_(nullptr)
 	  , error_(nullptr) {
 	}
 
@@ -48,6 +51,7 @@ class RSPipeline : public Nan::ObjectWrap {
 		DestroyMe();
 	}
 
+  private:
 	void DestroyMe() {
 		if (error_) rs2_free_error(error_);
 		error_ = nullptr;
@@ -55,110 +59,86 @@ class RSPipeline : public Nan::ObjectWrap {
 		pipeline_ = nullptr;
 	}
 
-	static NAN_METHOD(Destroy) {
-		auto me = Nan::ObjectWrap::Unwrap<RSPipeline>(info.Holder());
-		if (me) me->DestroyMe();
-		info.GetReturnValue().Set(Nan::Undefined());
+	Napi::Value Destroy(const CallbackInfo& info) {
+		this->DestroyMe();
 	}
 
-	static void New(const Nan::FunctionCallbackInfo<v8::Value>& info) {
-		if (info.IsConstructCall()) {
-			RSPipeline* obj = new RSPipeline();
-			obj->Wrap(info.This());
-			info.GetReturnValue().Set(info.This());
-		}
+	Napi::Value Create(const CallbackInfo& info) {
+		auto rsctx = ObjectWrap<RSContext>::Unwrap(info[0].ToObject());
+		if (!rsctx) return info.Env().Undefined();
+
+		this->pipeline_
+		  = GetNativeResult<rs2_pipeline*>(rs2_create_pipeline, &this->error_, rsctx->ctx_, &this->error_);
 	}
 
-	static NAN_METHOD(Create) {
-		info.GetReturnValue().Set(Nan::Undefined());
-		auto me	= Nan::ObjectWrap::Unwrap<RSPipeline>(info.Holder());
-		auto rsctx = Nan::ObjectWrap::Unwrap<RSContext>(info[0]->ToObject());
-		if (!me || !rsctx) return;
+	Napi::Value StartWithConfig(const CallbackInfo& info) {
+		if (!this->pipeline_) return info.Env().Undefined();
 
-		me->pipeline_ = GetNativeResult<rs2_pipeline*>(rs2_create_pipeline, &me->error_, rsctx->ctx_, &me->error_);
-	}
-
-	static NAN_METHOD(StartWithConfig) {
-		info.GetReturnValue().Set(Nan::Undefined());
-		auto me = Nan::ObjectWrap::Unwrap<RSPipeline>(info.Holder());
-		if (!me || !me->pipeline_) return;
-
-		RSConfig* config		   = Nan::ObjectWrap::Unwrap<RSConfig>(info[0]->ToObject());
+		RSConfig* config		   = ObjectWrap<RSConfig>::Unwrap(info[0].ToObject());
 		rs2_pipeline_profile* prof = GetNativeResult<
-		  rs2_pipeline_profile*>(rs2_pipeline_start_with_config, &me->error_, me->pipeline_, config->config_, &me->error_);
-		if (!prof) return;
+		  rs2_pipeline_profile*>(rs2_pipeline_start_with_config, &this->error_, this->pipeline_, config->config_, &this->error_);
+		if (!prof) return info.Env().Undefined();
 
-		info.GetReturnValue().Set(RSPipelineProfile::NewInstance(prof));
+		return RSPipelineProfile::NewInstance(info.Env(), prof);
 	}
 
-	static NAN_METHOD(Start) {
-		info.GetReturnValue().Set(Nan::Undefined());
-		auto me = Nan::ObjectWrap::Unwrap<RSPipeline>(info.Holder());
-		if (!me || !me->pipeline_) return;
+	Napi::Value Start(const CallbackInfo& info) {
+		if (!this->pipeline_) return info.Env().Undefined();
 
 		rs2_pipeline_profile* prof
-		  = GetNativeResult<rs2_pipeline_profile*>(rs2_pipeline_start, &me->error_, me->pipeline_, &me->error_);
-		if (!prof) return;
+		  = GetNativeResult<rs2_pipeline_profile*>(rs2_pipeline_start, &this->error_, this->pipeline_, &this->error_);
+		if (!prof) return info.Env().Undefined();
 
-		info.GetReturnValue().Set(RSPipelineProfile::NewInstance(prof));
+		return RSPipelineProfile::NewInstance(info.Env(), prof);
 	}
 
-	static NAN_METHOD(Stop) {
-		info.GetReturnValue().Set(Nan::Undefined());
-		auto me = Nan::ObjectWrap::Unwrap<RSPipeline>(info.Holder());
-		if (!me || !me->pipeline_) return;
+	Napi::Value Stop(const CallbackInfo& info) {
+		if (!this->pipeline_) return info.Env().Undefined();
 
-		CallNativeFunc(rs2_pipeline_stop, &me->error_, me->pipeline_, &me->error_);
+		CallNativeFunc(rs2_pipeline_stop, &this->error_, this->pipeline_, &this->error_);
 	}
 
-	static NAN_METHOD(WaitForFrames) {
-		info.GetReturnValue().Set(Nan::False());
-		auto me		  = Nan::ObjectWrap::Unwrap<RSPipeline>(info.Holder());
-		auto frameset = Nan::ObjectWrap::Unwrap<RSFrameSet>(info[0]->ToObject());
-		if (!me || !frameset) return;
+	Napi::Value WaitForFrames(const CallbackInfo& info) {
+		auto frameset = ObjectWrap<RSFrameSet>::Unwrap(info[0].ToObject());
+		if (!frameset) return Boolean::New(info.Env(), false);
 
-		auto timeout = info[1]->IntegerValue();
-		rs2_frame* frames
-		  = GetNativeResult<rs2_frame*>(rs2_pipeline_wait_for_frames, &me->error_, me->pipeline_, timeout, &me->error_);
-		if (!frames) return;
+		auto timeout	  = info[1].ToNumber().Int32Value();
+		rs2_frame* frames = GetNativeResult<
+		  rs2_frame*>(rs2_pipeline_wait_for_frames, &this->error_, this->pipeline_, timeout, &this->error_);
+		if (!frames) return Boolean::New(info.Env(), false);
 
 		frameset->Replace(frames);
-		info.GetReturnValue().Set(Nan::True());
+		return Boolean::New(info.Env(), true);
 	}
 
-	static NAN_METHOD(PollForFrames) {
-		info.GetReturnValue().Set(Nan::False());
-		auto me		  = Nan::ObjectWrap::Unwrap<RSPipeline>(info.Holder());
-		auto frameset = Nan::ObjectWrap::Unwrap<RSFrameSet>(info[0]->ToObject());
-		if (!me || !frameset) return;
+	Napi::Value PollForFrames(const CallbackInfo& info) {
+		auto frameset = ObjectWrap<RSFrameSet>::Unwrap(info[0].ToObject());
+		if (!frameset) return Boolean::New(info.Env(), false);
 
 		rs2_frame* frames = nullptr;
-		auto res = GetNativeResult<int>(rs2_pipeline_poll_for_frames, &me->error_, me->pipeline_, &frames, &me->error_);
-		if (!res) return;
+		auto res
+		  = GetNativeResult<int>(rs2_pipeline_poll_for_frames, &this->error_, this->pipeline_, &frames, &this->error_);
+		if (!res) return Boolean::New(info.Env(), false);
 
 		frameset->Replace(frames);
-		info.GetReturnValue().Set(Nan::True());
+		return Boolean::New(info.Env(), true);
 	}
 
-	static NAN_METHOD(GetActiveProfile) {
-		info.GetReturnValue().Set(Nan::Undefined());
-		auto me = Nan::ObjectWrap::Unwrap<RSPipeline>(info.Holder());
-		if (!me) return;
-
+	Napi::Value GetActiveProfile(const CallbackInfo& info) {
 		rs2_pipeline_profile* prof = GetNativeResult<
-		  rs2_pipeline_profile*>(rs2_pipeline_get_active_profile, &me->error_, me->pipeline_, &me->error_);
-		if (!prof) return;
+		  rs2_pipeline_profile*>(rs2_pipeline_get_active_profile, &this->error_, this->pipeline_, &this->error_);
+		if (!prof) return info.Env().Undefined();
 
-		info.GetReturnValue().Set(RSPipelineProfile::NewInstance(prof));
+		return RSPipelineProfile::NewInstance(info.Env(), prof);
 	}
 
   private:
-	static Nan::Persistent<v8::Function> constructor_;
+	static FunctionReference constructor;
 
 	rs2_pipeline* pipeline_;
 	rs2_error* error_;
 };
 
-Nan::Persistent<v8::Function> RSPipeline::constructor_;
+Napi::FunctionReference RSPipeline::constructor;
 
 #endif
