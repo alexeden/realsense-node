@@ -26,7 +26,7 @@ class RSIntrinsics : public DictBase {
 		SetMemberT("ppy", intrinsics.ppy);
 		SetMemberT("fx", intrinsics.fx);
 		SetMemberT("fy", intrinsics.fy);
-		SetMemberT("model", intrinsics.model);
+		SetMemberT("model", static_cast<uint32_t>(intrinsics.model));
 		SetMemberArray<Number, float, 5>("coeffs", intrinsics.coeffs);
 	}
 };
