@@ -1,5 +1,6 @@
 #include "context.cc"
 #include "device.cc"
+#include "device_hub.cc"
 #include "device_list.cc"
 #include "devices_changed_callback.cc"
 #include "dicts.cc"
@@ -63,7 +64,7 @@ Object Init(Env env, Object exports) {
 	RSSensor::Init(env, exports);
 	RSDevice::Init(env, exports);
 	RSDeviceList::Init(env, exports);
-	// RSDeviceHub::Init(env, exports);
+	RSDeviceHub::Init(env, exports);
 	RSStreamProfile::Init(env, exports);
 	// RSColorizer::Init(env, exports);
 	// RSFrameQueue::Init(env, exports);

@@ -1,6 +1,7 @@
 #ifndef DEVICE_HUB_H
 #define DEVICE_HUB_H
 
+#include "context.cc"
 #include "device.cc"
 #include <librealsense2/hpp/rs_types.hpp>
 #include <napi.h>
@@ -38,6 +39,9 @@ class RSDeviceHub : public ObjectWrap<RSDeviceHub> {
 	  , hub_(nullptr)
 	  , ctx_(nullptr)
 	  , error_(nullptr) {
+		RSContext* ctx = ObjectWrap<RSContext>::Unwrap(info[0].ToObject());
+		this->ctx_		 = ctx->ctx_;
+		this->hub_ = GetNativeResult<rs2_device_hub*>(rs2_create_device_hub, &this->error_, this->ctx_, &this->error_);
 	}
 
 	~RSDeviceHub() {
@@ -59,17 +63,6 @@ class RSDeviceHub : public ObjectWrap<RSDeviceHub> {
 		return info.Env().Undefined();
 	}
 
-	static void New(const Nan::FunctionCallbackInfo<v8::Value>& info) {
-		if (info.IsConstructCall()) {
-			RSDeviceHub* obj = new RSDeviceHub();
-			RSContext* ctx   = Nan::ObjectWrap::Unwrap<RSContext>(info[0]->ToObject());
-			obj->ctx_		 = ctx->ctx_;
-			obj->hub_ = GetNativeResult<rs2_device_hub*>(rs2_create_device_hub, &obj->error_, obj->ctx_, &obj->error_);
-			obj->Wrap(info.This());
-			info.GetReturnValue().Set(info.This());
-		}
-	}
-
 	Napi::Value WaitForDevice(const CallbackInfo& info) {
 		auto dev
 		  = GetNativeResult<rs2_device*>(rs2_device_hub_wait_for_device, &this->error_, this->hub_, &this->error_);
@@ -80,13 +73,13 @@ class RSDeviceHub : public ObjectWrap<RSDeviceHub> {
 
 	Napi::Value IsConnected(const CallbackInfo& info) {
 		auto dev = ObjectWrap<RSDevice>::Unwrap(info[0].ToObject());
-		if (!dev) return;
+		if (!dev) return info.Env().Undefined();
 
 		auto res = GetNativeResult<
 		  int>(rs2_device_hub_is_device_connected, &this->error_, this->hub_, dev->dev_, &this->error_);
-		if (this->error_) return;
+		if (this->error_) return info.Env().Undefined();
 
-		return Boolean::New(res ? true : false);
+		return Boolean::New(info.Env(), res ? true : false);
 	}
 
   private:
