@@ -81,7 +81,6 @@ class RSStreamProfile : public ObjectWrap<RSStreamProfile> {
 		return scope.Escape(napi_value(instance)).ToObject();
 	}
 
-  private:
 	RSStreamProfile(const CallbackInfo& info)
 	  : ObjectWrap<RSStreamProfile>(info)
 	  , error_(nullptr)
@@ -102,6 +101,8 @@ class RSStreamProfile : public ObjectWrap<RSStreamProfile> {
 	~RSStreamProfile() {
 		DestroyMe();
 	}
+
+  private:
 
 	void DestroyMe() {
 		if (error_) rs2_free_error(error_);

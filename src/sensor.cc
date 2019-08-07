@@ -103,8 +103,6 @@ class RSSensor
 			frame_->Replace(raw_frame);
 		}
 	}
-
-  private:
 	RSSensor(const CallbackInfo& info)
 	  : ObjectWrap<RSSensor>(info)
 	  , sensor_(nullptr)
@@ -121,6 +119,8 @@ class RSSensor
 	~RSSensor() {
 		DestroyMe();
 	}
+
+  private:
 
 	void RegisterNotificationCallbackMethod();
 

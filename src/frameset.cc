@@ -48,7 +48,6 @@ class RSFrameSet : public ObjectWrap<RSFrameSet> {
 		SetFrame(frame);
 	}
 
-  private:
 	RSFrameSet(const CallbackInfo& info)
 	  : ObjectWrap<RSFrameSet>(info) {
 		error_  = nullptr;
@@ -59,6 +58,7 @@ class RSFrameSet : public ObjectWrap<RSFrameSet> {
 		DestroyMe();
 	}
 
+  private:
 	void SetFrame(rs2_frame* frame) {
 		if (
 		  !frame

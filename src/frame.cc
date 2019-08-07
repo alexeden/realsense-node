@@ -73,7 +73,6 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		// Function::MakeCallback(this, "_internalResetBuffer", 0, nullptr);
 	}
 
-  private:
 	RSFrame(const CallbackInfo& info)
 	  : ObjectWrap<RSFrame>(info)
 	  , frame_(nullptr)
@@ -83,6 +82,9 @@ class RSFrame : public ObjectWrap<RSFrame> {
 	~RSFrame() {
 		DestroyMe();
 	}
+
+  private:
+
 	void DestroyMe() {
 		if (this->error_) rs2_free_error(error_);
 		if (this->frame_) rs2_release_frame(frame_);

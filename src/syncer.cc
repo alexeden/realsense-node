@@ -34,7 +34,6 @@ class RSSyncer : public ObjectWrap<RSSyncer> {
 		return scope.Escape(napi_value(instance)).ToObject();
 	}
 
-  private:
 	RSSyncer(const CallbackInfo& info)
 	  : ObjectWrap<RSSyncer>(info)
 	  , syncer_(nullptr)
@@ -50,6 +49,8 @@ class RSSyncer : public ObjectWrap<RSSyncer> {
 	~RSSyncer() {
 		DestroyMe();
 	}
+
+  private:
 
 	void DestroyMe() {
 		if (error_) rs2_free_error(error_);
