@@ -4,6 +4,7 @@
 #include "dicts.cc"
 #include "frame.cc"
 #include "main_thread_callback.cc"
+#include "notification_callbacks.cc"
 #include "options.cc"
 #include "syncer.cc"
 #include "utils.cc"

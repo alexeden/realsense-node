@@ -323,7 +323,6 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 		return info.Env().Undefined();
 	}
 
-  private:
 	bool IsPlaybackInternal() {
 		auto val = GetNativeResult<int>(rs2_is_device_extendable_to, &error_, dev_, RS2_EXTENSION_PLAYBACK, &error_);
 

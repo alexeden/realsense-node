@@ -1,6 +1,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include "error_util.cc"
 #include <librealsense2/hpp/rs_types.hpp>
 
 template<typename R, typename F, typename... arguments>
