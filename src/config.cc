@@ -136,8 +136,12 @@ class RSConfig : public ObjectWrap<RSConfig> {
 		CallNativeFunc(rs2_config_disable_all_streams, &this->error_, this->config_, &this->error_);
 		return info.Env().Undefined();
 	}
-	Napi::Value Resolve(const CallbackInfo& info) {}
-	Napi::Value CanResolve(const CallbackInfo& info) {}
+	Napi::Value Resolve(const CallbackInfo& info) {
+		return info.Env().Undefined();
+	}
+	Napi::Value CanResolve(const CallbackInfo& info) {
+		return info.Env().Undefined();
+	}
 
   private:
 	static FunctionReference constructor;

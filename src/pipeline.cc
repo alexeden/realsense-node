@@ -62,6 +62,7 @@ class RSPipeline : public ObjectWrap<RSPipeline> {
 
 	Napi::Value Destroy(const CallbackInfo& info) {
 		this->DestroyMe();
+		return info.Env().Undefined();
 	}
 
 	Napi::Value Create(const CallbackInfo& info) {
@@ -70,6 +71,7 @@ class RSPipeline : public ObjectWrap<RSPipeline> {
 
 		this->pipeline_
 		  = GetNativeResult<rs2_pipeline*>(rs2_create_pipeline, &this->error_, rsctx->ctx_, &this->error_);
+		return info.Env().Undefined();
 	}
 
 	Napi::Value StartWithConfig(const CallbackInfo& info) {
@@ -97,6 +99,7 @@ class RSPipeline : public ObjectWrap<RSPipeline> {
 		if (!this->pipeline_) return info.Env().Undefined();
 
 		CallNativeFunc(rs2_pipeline_stop, &this->error_, this->pipeline_, &this->error_);
+		return info.Env().Undefined();
 	}
 
 	Napi::Value WaitForFrames(const CallbackInfo& info) {
