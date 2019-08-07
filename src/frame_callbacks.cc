@@ -6,6 +6,9 @@
 #include <iostream>
 #include <librealsense2/hpp/rs_types.hpp>
 
+class RSDevice;
+class RSSensor;
+
 class FrameCallbackInfo : public MainThreadCallbackInfo {
   public:
 	FrameCallbackInfo(rs2_frame* frame, void* data)
