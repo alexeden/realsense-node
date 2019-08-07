@@ -1,5 +1,6 @@
 #include "config.cc"
 #include "context.cc"
+#include "align.cc"
 #include "device.cc"
 #include "device_hub.cc"
 #include "device_list.cc"
@@ -74,7 +75,7 @@ Object Init(Env env, Object exports) {
 	// RSFrameQueue::Init(env, exports);
 	RSFrame::Init(env, exports);
 	RSSyncer::Init(env, exports);
-	// RSAlign::Init(env, exports);
+	RSAlign::Init(env, exports);
 	// RSFilter::Init(env, exports);
 
 	return exports;

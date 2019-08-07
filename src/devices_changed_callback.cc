@@ -16,24 +16,29 @@ class DevicesChangedCallbackInfo : public MainThreadCallbackInfo {
 	  , added_(a)
 	  , ctx_(ctx)
 	  , env_(env) {
+		std::cerr << __FILE__ << ":" << __LINE__ << " DevicesChangedCallbackInfo::DevicesChangedCallbackInfo"
+				  << std::endl;
 	}
 
-	virtual ~DevicesChangedCallbackInfo() {
+	~DevicesChangedCallbackInfo() {
+		std::cerr << __FILE__ << ":" << __LINE__ << " DevicesChangedCallbackInfo::~DevicesChangedCallbackInfo"
+				  << std::endl;
 		if (!consumed_) Release();
 	}
-	virtual void Run() {
+	void Run() {
+		std::cerr << __FILE__ << ":" << __LINE__ << " DevicesChangedCallbackInfo::Run" << std::endl;
 		SetConsumed();
-		std::cerr << __FILE__ << ":" << __LINE__ << std::endl;
+		std::cerr << __FILE__ << ":" << __LINE__ << " Run" << std::endl;
 		auto env = this->env_;
 		// env.
 		std::cerr << __FILE__ << ":" << __LINE__ << env << std::endl;
-		EscapableHandleScope scope(this->env_);
-		std::cerr << __FILE__ << ":" << __LINE__ << std::endl;
-		// auto handle = scope.Escape(napi_value(this->ctx_)).ToObject();
-		std::cerr << __FILE__ << ":" << __LINE__ << std::endl;
+		// EscapableHandleScope scope(this->env_);
+		// std::cerr << __FILE__ << ":" << __LINE__ << std::endl;
+		// // auto handle = scope.Escape(napi_value(this->ctx_)).ToObject();
+		// std::cerr << __FILE__ << ":" << __LINE__ << std::endl;
 
-		// AsyncContext async_ctx(this->env_, "devices_changed_callback_info", scope);
-		std::cerr << __FILE__ << ":" << __LINE__ << std::endl;
+		// // AsyncContext async_ctx(this->env_, "devices_changed_callback_info", scope);
+		// std::cerr << __FILE__ << ":" << __LINE__ << std::endl;
 		// auto ctx = scope.Escape(napi_value(instance)).ToObject();
 		// auto ctx = ObjectWrap<RSContext>::Unwrap(ctx_);
 		// HandleScope scope;
@@ -54,7 +59,9 @@ class DevicesChangedCallbackInfo : public MainThreadCallbackInfo {
 		// this->ctx_->device_changed_callback_.Call({});
 		// this->ctx_->device_changed_callback_.MakeCallback(Napi::Object::New(this->env_), {}, async_ctx);
 	}
-	virtual void Release() {
+	void Release() {
+		std::cerr << __FILE__ << ":" << __LINE__ << " DevicesChangedCallbackInfo::Release" << std::endl;
+
 		if (removed_) {
 			rs2_delete_device_list(removed_);
 			removed_ = nullptr;
@@ -79,16 +86,20 @@ class DevicesChangedCallback : public rs2_devices_changed_callback {
 	explicit DevicesChangedCallback(RSContext* context, Env env)
 	  : ctx_(context)
 	  , env_(env) {
+		std::cerr << __FILE__ << ":" << __LINE__ << " DevicesChangedCallback::DevicesChangedCallback" << std::endl;
 	}
 	virtual void on_devices_changed(rs2_device_list* removed, rs2_device_list* added) {
+		std::cerr << __FILE__ << ":" << __LINE__ << "DevicesChangedCallback::on_devices_changed" << std::endl;
 		MainThreadCallback::NotifyMainThread(new DevicesChangedCallbackInfo(removed, added, ctx_, env_));
 	}
 
 	virtual void release() {
-		delete this;
+		std::cerr << __FILE__ << ":" << __LINE__ << " DevicesChangedCallback::Release" << std::endl;
+		// delete this;
 	}
 
 	virtual ~DevicesChangedCallback() {
+		std::cerr << __FILE__ << ":" << __LINE__ << " DevicesChangedCallback::~DevicesChangedCallback" << std::endl;
 	}
 	RSContext* ctx_;
 	Env env_;

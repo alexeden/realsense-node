@@ -1,37 +1,52 @@
 #ifndef ALIGN_H
 #define ALIGN_H
 
+#include "frame_callbacks.cc"
+#include "frameset.cc"
 #include <librealsense2/hpp/rs_types.hpp>
 #include <napi.h>
 
 using namespace Napi;
 
-class RSAlign : public Nan::ObjectWrap {
+class RSAlign : public ObjectWrap<RSAlign> {
   public:
-	static void Init(v8::Local<v8::Object> exports) {
-		v8::Local<v8::FunctionTemplate> tpl = Nan::New<v8::FunctionTemplate>(New);
-		tpl->SetClassName(Nan::New("RSAlign").ToLocalChecked());
-		tpl->InstanceTemplate()->SetInternalFieldCount(1);
+	static Object Init(Napi::Env env, Object exports) {
+		Napi::Function func = DefineClass(
+		  env,
+		  "RSAlign",
+		  {
+			InstanceMethod("destroy", &RSAlign::Destroy),
+			InstanceMethod("waitForFrames", &RSAlign::WaitForFrames),
+			InstanceMethod("process", &RSAlign::Process),
+		  });
 
-		Nan::SetPrototypeMethod(tpl, "destroy", Destroy);
-		Nan::SetPrototypeMethod(tpl, "waitForFrames", WaitForFrames);
-		Nan::SetPrototypeMethod(tpl, "process", Process);
+		constructor = Napi::Persistent(func);
+		constructor.SuppressDestruct();
+		exports.Set("RSAlign", func);
 
-		constructor_.Reset(tpl->GetFunction());
-		exports->Set(Nan::New("RSAlign").ToLocalChecked(), tpl->GetFunction());
+		return exports;
 	}
 
-  private:
-	RSAlign()
-	  : align_(nullptr)
+	RSAlign(const CallbackInfo& info)
+	  : ObjectWrap<RSAlign>(info)
+	  , align_(nullptr)
 	  , frame_queue_(nullptr)
 	  , error_(nullptr) {
+		auto stream  = static_cast<rs2_stream>(info[0].ToNumber().Int32Value());
+		this->align_  = GetNativeResult<rs2_processing_block*>(rs2_create_align, &this->error_, stream, &this->error_);
+
+		this->frame_queue_ = GetNativeResult<rs2_frame_queue*>(rs2_create_frame_queue, &this->error_, 1, &this->error_);
+		if (!this->frame_queue_) return;
+
+		auto callback = new FrameCallbackForFrameQueue(this->frame_queue_);
+		CallNativeFunc(rs2_start_processing, &this->error_, this->align_, callback, &this->error_);
 	}
 
 	~RSAlign() {
 		DestroyMe();
 	}
 
+  private:
 	void DestroyMe() {
 		if (error_) rs2_free_error(error_);
 		error_ = nullptr;
@@ -41,67 +56,43 @@ class RSAlign : public Nan::ObjectWrap {
 		frame_queue_ = nullptr;
 	}
 
-	static NAN_METHOD(Destroy) {
-		auto me = Nan::ObjectWrap::Unwrap<RSAlign>(info.Holder());
-		if (me) me->DestroyMe();
+	Napi::Value Destroy(const CallbackInfo& info) {
+		this->DestroyMe();
 
-		info.GetReturnValue().Set(Nan::Undefined());
+		return info.Env().Undefined();
 	}
 
-	static void New(const Nan::FunctionCallbackInfo<v8::Value>& info) {
-		if (!info.IsConstructCall()) return;
-
-		RSAlign* obj = new RSAlign();
-		auto stream  = static_cast<rs2_stream>(info[0]->IntegerValue());
-		obj->align_  = GetNativeResult<rs2_processing_block*>(rs2_create_align, &obj->error_, stream, &obj->error_);
-		if (!obj->align_) return;
-
-		obj->frame_queue_ = GetNativeResult<rs2_frame_queue*>(rs2_create_frame_queue, &obj->error_, 1, &obj->error_);
-		if (!obj->frame_queue_) return;
-
-		auto callback = new FrameCallbackForFrameQueue(obj->frame_queue_);
-		CallNativeFunc(rs2_start_processing, &obj->error_, obj->align_, callback, &obj->error_);
-
-		obj->Wrap(info.This());
-		info.GetReturnValue().Set(info.This());
-	}
-
-	static NAN_METHOD(WaitForFrames) {
-		info.GetReturnValue().Set(Nan::Undefined());
-		auto me = Nan::ObjectWrap::Unwrap<RSAlign>(info.Holder());
-		if (!me) return;
-
+	Napi::Value WaitForFrames(const CallbackInfo& info) {
 		rs2_frame* result
-		  = GetNativeResult<rs2_frame*>(rs2_wait_for_frame, &me->error_, me->frame_queue_, 5000, &me->error_);
-		if (!result) return;
+		  = GetNativeResult<rs2_frame*>(rs2_wait_for_frame, &this->error_, this->frame_queue_, 5000, &this->error_);
+		if (!result) return info.Env().Undefined();
 
-		info.GetReturnValue().Set(RSFrameSet::NewInstance(result));
+		return RSFrameSet::NewInstance(info.Env(), result);
 	}
 
-	static NAN_METHOD(Process) {
-		info.GetReturnValue().Set(Nan::False());
-		auto me		   = Nan::ObjectWrap::Unwrap<RSAlign>(info.Holder());
-		auto frameset  = Nan::ObjectWrap::Unwrap<RSFrameSet>(info[0]->ToObject());
-		auto target_fs = Nan::ObjectWrap::Unwrap<RSFrameSet>(info[1]->ToObject());
-		if (!me || !frameset || !target_fs) return;
+	Napi::Value Process(const CallbackInfo& info) {
+		auto frameset  = ObjectWrap<RSFrameSet>::Unwrap(info[0].ToObject());
+		auto target_fs = ObjectWrap<RSFrameSet>::Unwrap(info[1].ToObject());
+		if (!frameset || !target_fs) return Boolean::New(info.Env(), false);
 
 		// rs2_process_frame will release the input frame, so we need to addref
-		CallNativeFunc(rs2_frame_add_ref, &me->error_, frameset->GetFrames(), &me->error_);
-		if (me->error_) return;
+		CallNativeFunc(rs2_frame_add_ref, &this->error_, frameset->GetFrames(), &this->error_);
+		if (this->error_) return Boolean::New(info.Env(), false);
 
-		CallNativeFunc(rs2_process_frame, &me->error_, me->align_, frameset->GetFrames(), &me->error_);
-		if (me->error_) return;
+		CallNativeFunc(rs2_process_frame, &this->error_, this->align_, frameset->GetFrames(), &this->error_);
+		if (this->error_) return Boolean::New(info.Env(), false);
 
 		rs2_frame* frame = nullptr;
-		auto ret_code	= GetNativeResult<int>(rs2_poll_for_frame, &me->error_, me->frame_queue_, &frame, &me->error_);
-		if (!ret_code) return;
+		auto ret_code
+		  = GetNativeResult<int>(rs2_poll_for_frame, &this->error_, this->frame_queue_, &frame, &this->error_);
+		if (!ret_code) return Boolean::New(info.Env(), false);
 
 		target_fs->Replace(frame);
-		info.GetReturnValue().Set(Nan::True());
+		return Boolean::New(info.Env(), true);
 	}
 
   private:
-	static Nan::Persistent<v8::Function> constructor_;
+	static FunctionReference constructor;
 
 	rs2_processing_block* align_;
 	rs2_frame_queue* frame_queue_;
@@ -109,6 +100,6 @@ class RSAlign : public Nan::ObjectWrap {
 	friend class RSPipeline;
 };
 
-Nan::Persistent<v8::Function> RSAlign::constructor_;
+Napi::FunctionReference RSAlign::constructor;
 
 #endif

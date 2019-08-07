@@ -17,9 +17,12 @@ class MainThreadCallbackInfo {
 	virtual ~MainThreadCallbackInfo() {
 		pending_infos_.erase(find(pending_infos_.begin(), pending_infos_.end(), this));
 	}
+
 	virtual void Run() {
+		std::cerr << "MainThreadCallbackInfo::Run CALLED!!!!!! BAD" << std::endl;
 	}
 	virtual void Release() {
+		std::cerr << "MainThreadCallbackInfo::Release CALLED!!!!!! BAD" << std::endl;
 	}
 	void SetConsumed() {
 		consumed_ = true;
