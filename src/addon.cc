@@ -12,6 +12,7 @@
 #include "main_thread_callback.cc"
 #include "notification_callbacks.cc"
 #include "options.cc"
+#include "pipeline.cc"
 #include "pipeline_profile.cc"
 #include "sensor.cc"
 #include "stream_profile.cc"
@@ -61,7 +62,7 @@ Object Init(Env env, Object exports) {
 	// RSPointCloud::Init(env, exports);
 	RSPipelineProfile::Init(env, exports);
 	RSConfig::Init(env, exports);
-	// RSPipeline::Init(env, exports);
+	RSPipeline::Init(env, exports);
 	RSFrameSet::Init(env, exports);
 	RSSensor::Init(env, exports);
 	RSDevice::Init(env, exports);
