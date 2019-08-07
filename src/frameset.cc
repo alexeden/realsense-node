@@ -118,6 +118,7 @@ class RSFrameSet : public ObjectWrap<RSFrameSet> {
 			}
 			rs2_release_frame(frame);
 		}
+		return info.Env().Undefined();
 	}
 
 	Napi::Value ReplaceFrame(const CallbackInfo& info) {

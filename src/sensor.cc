@@ -265,11 +265,13 @@ class RSSensor
 
 	Napi::Value Close(const CallbackInfo& info) {
 		CallNativeFunc(rs2_close, &this->error_, this->sensor_, &this->error_);
+		return info.Env().Undefined();
 	}
 
 	Napi::Value SetNotificationCallback(const CallbackInfo& info) {
 		this->notification_callback_name_ = std::string(info[0].ToString());
 		this->RegisterNotificationCallbackMethod();
+		return info.Env().Undefined();
 	}
 
 	Napi::Value SetRegionOfInterest(const CallbackInfo& info) {

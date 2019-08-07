@@ -262,8 +262,8 @@ class RSFrame : public ObjectWrap<RSFrame> {
 
 	Napi::Value GetFrameMetadata(const CallbackInfo& info) {
 		rs2_frame_metadata_value metadata = static_cast<rs2_frame_metadata_value>(info[0].ToNumber().Int32Value());
-		TypedArray content(info.Env(), info[1]);
-		auto data = content.ArrayBuffer().Data();
+		TypedArrayOf<unsigned char> content(info.Env(), info[1]);
+		auto data = content.Data();
 		if (!data) return Boolean::New(info.Env(), false);
 
 		rs2_metadata_type output = GetNativeResult<
@@ -278,7 +278,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		}
 		else {
 			// little endian
-			for (int32_t i = 0; i < 8; i++) { (&data)[i] = out_ptr[7 - i]; }
+			for (int32_t i = 0; i < 8; i++) { data[i] = out_ptr[7 - i]; }
 		}
 
 		return Boolean::New(info.Env(), true);
