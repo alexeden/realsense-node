@@ -140,17 +140,17 @@ class RSContext : public ObjectWrap<RSContext> {
 	}
 
 	Napi::Value LoadDeviceFile(const CallbackInfo& info) {
-		std::string device_file = info[0].As<String>().ToString();
+		auto device_file = std::string(info[0].ToString());
 		auto dev
-		  = GetNativeResult<rs2_device*>(rs2_context_add_device, &this->error_, this->ctx_, device_file, &this->error_);
+		  = GetNativeResult<rs2_device*>(rs2_context_add_device, &this->error_, this->ctx_, device_file.c_str(), &this->error_);
 		if (!dev) return info.Env().Undefined();
 
 		return RSDevice::NewInstance(info.Env(), dev, RSDevice::kPlaybackDevice);
 	}
 
 	Napi::Value UnloadDeviceFile(const CallbackInfo& info) {
-		std::string device_file = info[0].As<String>().ToString();
-		CallNativeFunc(rs2_context_remove_device, &this->error_, this->ctx_, device_file, &this->error_);
+		auto device_file = std::string(info[0].ToString());
+		CallNativeFunc(rs2_context_remove_device, &this->error_, this->ctx_, device_file.c_str(), &this->error_);
 		return info.Env().Undefined();
 	}
 

@@ -18,7 +18,9 @@ class FrameCallbackInfo : public MainThreadCallbackInfo {
 	virtual ~FrameCallbackInfo() {
 		if (!consumed_) Release();
 	}
-	virtual void Run();
+	virtual void Run() {
+
+	}
 	virtual void Release() {
 		if (frame_) {
 			rs2_release_frame(frame_);
