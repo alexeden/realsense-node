@@ -11,6 +11,7 @@
 #include "frameset.cc"
 #include "main_thread_callback.cc"
 #include "notification_callbacks.cc"
+#include "colorizer.cc"
 #include "options.cc"
 #include "pipeline.cc"
 #include "pipeline_profile.cc"
@@ -69,7 +70,7 @@ Object Init(Env env, Object exports) {
 	RSDeviceList::Init(env, exports);
 	RSDeviceHub::Init(env, exports);
 	RSStreamProfile::Init(env, exports);
-	// RSColorizer::Init(env, exports);
+	RSColorizer::Init(env, exports);
 	// RSFrameQueue::Init(env, exports);
 	RSFrame::Init(env, exports);
 	RSSyncer::Init(env, exports);

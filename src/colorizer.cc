@@ -1,44 +1,49 @@
 #ifndef COLORIZER_H
 #define COLORIZER_H
 
+#include "frame.cc"
+#include "frame_callbacks.cc"
+#include "options.cc"
+#include "utils.cc"
 #include <librealsense2/hpp/rs_types.hpp>
 #include <napi.h>
 
 using namespace Napi;
 
 class RSColorizer
-  : public Nan::ObjectWrap
+  : public ObjectWrap<RSColorizer>
   , Options {
   public:
-	static void Init(v8::Local<v8::Object> exports) {
-		v8::Local<v8::FunctionTemplate> tpl = Nan::New<v8::FunctionTemplate>(New);
-		tpl->SetClassName(Nan::New("RSColorizer").ToLocalChecked());
-		tpl->InstanceTemplate()->SetInternalFieldCount(1);
+	static Object Init(Napi::Env env, Object exports) {
+		Napi::Function func = DefineClass(
+		  env,
+		  "RSColorizer",
+		  {
+			InstanceMethod("destroy", &RSColorizer::Destroy),
+			InstanceMethod("create", &RSColorizer::Create),
+			InstanceMethod("colorize", &RSColorizer::Colorize),
+			InstanceMethod("supportsOption", &RSColorizer::SupportsOption),
+			InstanceMethod("getOption", &RSColorizer::GetOption),
+			InstanceMethod("setOption", &RSColorizer::SetOption),
+			InstanceMethod("getOptionRange", &RSColorizer::GetOptionRange),
+			InstanceMethod("isOptionReadonly", &RSColorizer::IsOptionReadonly),
+			InstanceMethod("getOptionDescription", &RSColorizer::GetOptionDescription),
+			InstanceMethod("getOptionValueDescription", &RSColorizer::GetOptionValueDescription),
 
-		Nan::SetPrototypeMethod(tpl, "destroy", Destroy);
-		Nan::SetPrototypeMethod(tpl, "create", Create);
-		Nan::SetPrototypeMethod(tpl, "colorize", Colorize);
-		Nan::SetPrototypeMethod(tpl, "supportsOption", SupportsOption);
-		Nan::SetPrototypeMethod(tpl, "getOption", GetOption);
-		Nan::SetPrototypeMethod(tpl, "setOption", SetOption);
-		Nan::SetPrototypeMethod(tpl, "getOptionRange", GetOptionRange);
-		Nan::SetPrototypeMethod(tpl, "isOptionReadonly", IsOptionReadonly);
-		Nan::SetPrototypeMethod(tpl, "getOptionDescription", GetOptionDescription);
-		Nan::SetPrototypeMethod(tpl, "getOptionValueDescription", GetOptionValueDescription);
+		  });
 
-		constructor_.Reset(tpl->GetFunction());
-		exports->Set(Nan::New("RSColorizer").ToLocalChecked(), tpl->GetFunction());
+		constructor = Napi::Persistent(func);
+		constructor.SuppressDestruct();
+		exports.Set("RSColorizer", func);
+
+		return exports;
 	}
 
-	static v8::Local<v8::Object> NewInstance() {
-		Nan::EscapableHandleScope scope;
+	static Object NewInstance(Napi::Env env) {
+		EscapableHandleScope scope(env);
+		Object instance = constructor.New({});
 
-		v8::Local<v8::Function> cons   = Nan::New<v8::Function>(constructor_);
-		v8::Local<v8::Context> context = v8::Isolate::GetCurrent()->GetCurrentContext();
-
-		v8::Local<v8::Object> instance = cons->NewInstance(context, 0, nullptr).ToLocalChecked();
-
-		return scope.Escape(instance);
+		return scope.Escape(napi_value(instance)).ToObject();
 	}
 
 	rs2_options* GetOptionsPointer() override {
@@ -46,10 +51,9 @@ class RSColorizer
 		// caused the inheritance relation was hidden
 		return reinterpret_cast<rs2_options*>(colorizer_);
 	}
-
-  private:
-	RSColorizer()
-	  : colorizer_(nullptr)
+	RSColorizer(const CallbackInfo& info)
+	  : ObjectWrap<RSColorizer>(info)
+	  , colorizer_(nullptr)
 	  , frame_queue_(nullptr)
 	  , error_(nullptr) {
 	}
@@ -58,6 +62,7 @@ class RSColorizer
 		DestroyMe();
 	}
 
+  private:
 	void DestroyMe() {
 		if (error_) rs2_free_error(error_);
 		error_ = nullptr;
@@ -67,115 +72,81 @@ class RSColorizer
 		frame_queue_ = nullptr;
 	}
 
-	static NAN_METHOD(Destroy) {
-		auto me = Nan::ObjectWrap::Unwrap<RSColorizer>(info.Holder());
-		if (me) { me->DestroyMe(); }
-		info.GetReturnValue().Set(Nan::Undefined());
+	Napi::Value Destroy(const CallbackInfo& info) {
+		this->DestroyMe();
+		return info.Env().Undefined();
 	}
 
-	static void New(const Nan::FunctionCallbackInfo<v8::Value>& info) {
-		if (info.IsConstructCall()) {
-			RSColorizer* obj = new RSColorizer();
-			obj->Wrap(info.This());
-			info.GetReturnValue().Set(info.This());
-		}
+	Napi::Value Create(const CallbackInfo& info) {
+		this->colorizer_ = GetNativeResult<rs2_processing_block*>(rs2_create_colorizer, &this->error_, &this->error_);
+		if (!this->colorizer_) return info.Env().Undefined();
+
+		this->frame_queue_ = GetNativeResult<rs2_frame_queue*>(rs2_create_frame_queue, &this->error_, 1, &this->error_);
+		if (!this->frame_queue_) return info.Env().Undefined();
+
+		auto callback = new FrameCallbackForFrameQueue(this->frame_queue_);
+		CallNativeFunc(rs2_start_processing, &this->error_, this->colorizer_, callback, &this->error_);
+		return info.Env().Undefined();
 	}
 
-	static NAN_METHOD(Create) {
-		info.GetReturnValue().Set(Nan::Undefined());
-		auto me = Nan::ObjectWrap::Unwrap<RSColorizer>(info.Holder());
-		if (!me) return;
-
-		me->colorizer_ = GetNativeResult<rs2_processing_block*>(rs2_create_colorizer, &me->error_, &me->error_);
-		if (!me->colorizer_) return;
-
-		me->frame_queue_ = GetNativeResult<rs2_frame_queue*>(rs2_create_frame_queue, &me->error_, 1, &me->error_);
-		if (!me->frame_queue_) return;
-
-		auto callback = new FrameCallbackForFrameQueue(me->frame_queue_);
-		CallNativeFunc(rs2_start_processing, &me->error_, me->colorizer_, callback, &me->error_);
-	}
-
-	static NAN_METHOD(Colorize) {
-		info.GetReturnValue().Set(Nan::False());
-		auto me			= Nan::ObjectWrap::Unwrap<RSColorizer>(info.Holder());
-		RSFrame* depth  = Nan::ObjectWrap::Unwrap<RSFrame>(info[0]->ToObject());
-		RSFrame* target = Nan::ObjectWrap::Unwrap<RSFrame>(info[1]->ToObject());
-		if (!me || !depth || !depth->frame_ || !target) return;
+	Napi::Value Colorize(const CallbackInfo& info) {
+		RSFrame* depth  = ObjectWrap<RSFrame>::Unwrap(info[0].ToObject());
+		RSFrame* target = ObjectWrap<RSFrame>::Unwrap(info[1].ToObject());
+		if (!depth || !depth->frame_ || !target) return Boolean::New(info.Env(), false);
 
 		// rs2_process_frame will release the input frame, so we need to addref
-		CallNativeFunc(rs2_frame_add_ref, &me->error_, depth->frame_, &me->error_);
-		if (me->error_) return;
+		CallNativeFunc(rs2_frame_add_ref, &this->error_, depth->frame_, &this->error_);
+		if (this->error_) return Boolean::New(info.Env(), false);
 
-		CallNativeFunc(rs2_process_frame, &me->error_, me->colorizer_, depth->frame_, &me->error_);
-		if (me->error_) return;
+		CallNativeFunc(rs2_process_frame, &this->error_, this->colorizer_, depth->frame_, &this->error_);
+		if (this->error_) return Boolean::New(info.Env(), false);
 
 		rs2_frame* result
-		  = GetNativeResult<rs2_frame*>(rs2_wait_for_frame, &me->error_, me->frame_queue_, 5000, &me->error_);
+		  = GetNativeResult<rs2_frame*>(rs2_wait_for_frame, &this->error_, this->frame_queue_, 5000, &this->error_);
 		target->DestroyMe();
-		if (!result) return;
+		if (!result) return Boolean::New(info.Env(), false);
 
 		target->Replace(result);
-		info.GetReturnValue().Set(Nan::True());
+
+		return Boolean::New(info.Env(), true);
 	}
 
-	static NAN_METHOD(SupportsOption) {
-		auto me = Nan::ObjectWrap::Unwrap<RSColorizer>(info.Holder());
-		if (me) return me->SupportsOptionInternal(info);
-
-		info.GetReturnValue().Set(Nan::False());
+	Napi::Value SupportsOption(const CallbackInfo& info) {
+		return this->SupportsOptionInternal(info);
 	}
 
-	static NAN_METHOD(GetOption) {
-		auto me = Nan::ObjectWrap::Unwrap<RSColorizer>(info.Holder());
-		if (me) return me->GetOptionInternal(info);
-
-		info.GetReturnValue().Set(Nan::Undefined());
+	Napi::Value GetOption(const CallbackInfo& info) {
+		return this->GetOptionInternal(info);
 	}
 
-	static NAN_METHOD(GetOptionDescription) {
-		auto me = Nan::ObjectWrap::Unwrap<RSColorizer>(info.Holder());
-		if (me) return me->GetOptionDescriptionInternal(info);
-
-		info.GetReturnValue().Set(Nan::Undefined());
+	Napi::Value GetOptionDescription(const CallbackInfo& info) {
+		return this->GetOptionDescriptionInternal(info);
 	}
 
-	static NAN_METHOD(GetOptionValueDescription) {
-		auto me = Nan::ObjectWrap::Unwrap<RSColorizer>(info.Holder());
-		if (me) return me->GetOptionValueDescriptionInternal(info);
-
-		info.GetReturnValue().Set(Nan::Undefined());
+	Napi::Value GetOptionValueDescription(const CallbackInfo& info) {
+		return this->GetOptionValueDescriptionInternal(info);
 	}
 
-	static NAN_METHOD(SetOption) {
-		auto me = Nan::ObjectWrap::Unwrap<RSColorizer>(info.Holder());
-		if (me) return me->SetOptionInternal(info);
-
-		info.GetReturnValue().Set(Nan::Undefined());
+	Napi::Value SetOption(const CallbackInfo& info) {
+		return this->SetOptionInternal(info);
 	}
 
-	static NAN_METHOD(GetOptionRange) {
-		auto me = Nan::ObjectWrap::Unwrap<RSColorizer>(info.Holder());
-		if (me) return me->GetOptionRangeInternal(info);
-
-		info.GetReturnValue().Set(Nan::Undefined());
+	Napi::Value GetOptionRange(const CallbackInfo& info) {
+		return this->GetOptionRangeInternal(info);
 	}
 
-	static NAN_METHOD(IsOptionReadonly) {
-		auto me = Nan::ObjectWrap::Unwrap<RSColorizer>(info.Holder());
-		if (me) return me->IsOptionReadonlyInternal(info);
-
-		info.GetReturnValue().Set(Nan::False());
+	Napi::Value IsOptionReadonly(const CallbackInfo& info) {
+		return this->IsOptionReadonlyInternal(info);
 	}
 
   private:
-	static Nan::Persistent<v8::Function> constructor_;
+	static FunctionReference constructor;
 
 	rs2_processing_block* colorizer_;
 	rs2_frame_queue* frame_queue_;
 	rs2_error* error_;
 };
 
-Nan::Persistent<v8::Function> RSColorizer::constructor_;
+Napi::FunctionReference RSColorizer::constructor;
 
 #endif
