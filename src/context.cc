@@ -183,6 +183,7 @@ class RSContext : public ObjectWrap<RSContext> {
 	std::string section_;
 	rs2_recording_mode mode_;
 	friend class DevicesChangedCallbackInfo;
+	friend class DevicesChangedCallback;
 	friend class RSPipeline;
 	friend class RSDeviceHub;
 };

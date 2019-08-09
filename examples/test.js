@@ -16,3 +16,11 @@ console.log(ctx.onDevicesChanged((...args) => {
 
 // addon.cleanup();
 console.log('Done!');
+process.once('SIGHUP', () => {
+  console.log('RESTART!');
+});
+
+process.once('SIGUSR2', () => {
+  console.log('SIGUSR2!');
+  addon.cleanup();
+});

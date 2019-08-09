@@ -83,14 +83,18 @@ class DevicesChangedCallbackInfo : public MainThreadCallbackInfo {
 
 class DevicesChangedCallback : public rs2_devices_changed_callback {
   public:
-	explicit DevicesChangedCallback(RSContext* context, Env env)
+	DevicesChangedCallback(RSContext* context, Env env)
 	  : ctx_(context)
 	  , env_(env) {
 		std::cerr << __FILE__ << ":" << __LINE__ << " DevicesChangedCallback::DevicesChangedCallback" << std::endl;
 	}
 	virtual void on_devices_changed(rs2_device_list* removed, rs2_device_list* added) {
 		std::cerr << __FILE__ << ":" << __LINE__ << "DevicesChangedCallback::on_devices_changed" << std::endl;
-		MainThreadCallback::NotifyMainThread(new DevicesChangedCallbackInfo(removed, added, ctx_, env_));
+		EscapableHandleScope scope(this->env_);
+		// auto result = this->ctx_->device_changed_callback_.Call(this, {});
+		scope.Escape(this->ctx_->device_changed_callback_.Call({}));
+
+		// MainThreadCallback::NotifyMainThread(new DevicesChangedCallbackInfo(removed, added, ctx_, env_));
 	}
 
 	virtual void release() {
@@ -107,7 +111,8 @@ class DevicesChangedCallback : public rs2_devices_changed_callback {
 
 void RSContext::RegisterDevicesChangedCallbackMethod(Napi::Env env) {
 	std::cerr << "RSContext::RegisterDevicesChangedCallbackMethod" << std::endl;
-	CallNativeFunc(rs2_set_devices_changed_callback_cpp, &error_, ctx_, new DevicesChangedCallback(this, env), &error_);
+	rs2_set_devices_changed_callback_cpp(this->ctx_, new DevicesChangedCallback(this, env), &this->error_);
+	// CallNativeFunc(rs2_set_devices_changed_callback_cpp, &error_, this->ctx_, new DevicesChangedCallback(this, env), &error_);
 }
 
 #endif
