@@ -10,6 +10,7 @@
 #include <librealsense2/hpp/rs_types.hpp>
 #include <librealsense2/rs.h>
 #include <napi.h>
+#include <thread>
 
 using namespace Napi;
 
@@ -115,7 +116,8 @@ class RSContext : public ObjectWrap<RSContext> {
 	}
 
   private:
-	void RegisterDevicesChangedCallbackMethod(Napi::Env env);
+	void RegisterDevicesChangedCallbackMethod(Napi::Env env) {
+	}
 
 	void DestroyMe() {
 		if (error_) rs2_free_error(error_);
@@ -131,6 +133,48 @@ class RSContext : public ObjectWrap<RSContext> {
 	}
 
 	Napi::Value OnDevicesChanged(const CallbackInfo& info) {
+		auto tsfn = std::make_shared<ThreadSafeFunction>(ThreadSafeFunction::New(
+		  info.Env(),
+		  info[0].As<Function>(),			  // JavaScript function called asynchronously
+		  Object(),							  // Receiver
+		  "Resource Name",					  // Name
+		  1,								  // Queue size of 1
+		  1,								  // Only one thread will use this initially
+		  (void*) nullptr,					  // No finalize data
+		  [](Napi::Env env, void*, void*) {}, // Finalizer
+		  (void*) nullptr					  // No context
+		  ));
+
+		auto count = 5;
+
+		// Create a new thread
+		std::thread nativeThread([tsfn, count] {
+			// Transform native data into JS data
+			auto callback = [](Napi::Env env, Function jsCallback, int* value) {
+				jsCallback.Call({ Number::New(env, *value) });
+				// We're finished with it.
+				delete value;
+			};
+
+			for (int i = 0; i < count; i++) {
+				// Create new data
+				int* value = new int(clock());
+
+				napi_status status = tsfn->BlockingCall(value, callback);
+				if (status != napi_status::napi_ok) {
+					// Handle error
+					break;
+				}
+
+				std::this_thread::sleep_for(std::chrono::seconds(1));
+			}
+
+			// Release the thread-safe function
+			tsfn->Release();
+		});
+
+		nativeThread.detach();
+
 		this->device_changed_callback_ = Persistent(info[0].As<Function>());
 		this->device_changed_callback_.SuppressDestruct();
 		// this->device_changed_callback_name_ = info[0].As<String>().ToString();
@@ -141,8 +185,8 @@ class RSContext : public ObjectWrap<RSContext> {
 
 	Napi::Value LoadDeviceFile(const CallbackInfo& info) {
 		auto device_file = std::string(info[0].ToString());
-		auto dev
-		  = GetNativeResult<rs2_device*>(rs2_context_add_device, &this->error_, this->ctx_, device_file.c_str(), &this->error_);
+		auto dev		 = GetNativeResult<
+		  rs2_device*>(rs2_context_add_device, &this->error_, this->ctx_, device_file.c_str(), &this->error_);
 		if (!dev) return info.Env().Undefined();
 
 		return RSDevice::NewInstance(info.Env(), dev, RSDevice::kPlaybackDevice);
