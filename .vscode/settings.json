@@ -12,7 +12,8 @@
   ],
   "C_Cpp.default.compilerPath": "/usr/bin/clang",
   "C_Cpp.default.defines": [
-    "REMOVE_DEPRECATED_TRANSFORMERS"
+    "REMOVE_DEPRECATED_TRANSFORMERS",
+    "NAPI_VERSION=4"
   ],
   "files.associations": {
     "*.config": "yaml",
