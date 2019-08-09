@@ -116,8 +116,7 @@ class RSContext : public ObjectWrap<RSContext> {
 	}
 
   private:
-	void RegisterDevicesChangedCallbackMethod(Napi::Env env) {
-	}
+	void RegisterDevicesChangedCallbackMethod(Napi::Env env, std::shared_ptr<ThreadSafeFunction> fn);
 
 	void DestroyMe() {
 		if (error_) rs2_free_error(error_);
@@ -133,11 +132,13 @@ class RSContext : public ObjectWrap<RSContext> {
 	}
 
 	Napi::Value OnDevicesChanged(const CallbackInfo& info) {
+		std::cerr << "RSContext::OnDevicesChanged" <<  std::endl;
+		std::cerr << "thread id: " << std::this_thread::get_id() << std::endl;
 		auto tsfn = std::make_shared<ThreadSafeFunction>(ThreadSafeFunction::New(
 		  info.Env(),
 		  info[0].As<Function>(),			  // JavaScript function called asynchronously
 		  Object(),							  // Receiver
-		  "Resource Name",					  // Name
+		  "OnDevicesChanged",					  // Name
 		  1,								  // Queue size of 1
 		  1,								  // Only one thread will use this initially
 		  (void*) nullptr,					  // No finalize data
@@ -148,37 +149,35 @@ class RSContext : public ObjectWrap<RSContext> {
 		auto count = 5;
 
 		// Create a new thread
-		std::thread nativeThread([tsfn, count] {
+		std::thread nativeThread([tsfn] {
 			// Transform native data into JS data
-			auto callback = [](Napi::Env env, Function jsCallback, int* value) {
-				jsCallback.Call({ Number::New(env, *value) });
+			auto callback = [](Napi::Env env, Function jsCallback) {
+				jsCallback.Call({ });
 				// We're finished with it.
-				delete value;
+				// delete value;
 			};
+			std::this_thread::sleep_for(std::chrono::seconds(1));
 
-			for (int i = 0; i < count; i++) {
-				// Create new data
-				int* value = new int(clock());
-
-				napi_status status = tsfn->BlockingCall(value, callback);
-				if (status != napi_status::napi_ok) {
-					// Handle error
-					break;
-				}
-
-				std::this_thread::sleep_for(std::chrono::seconds(1));
+			napi_status status = tsfn->BlockingCall(callback);
+			if (status != napi_status::napi_ok) {
+				// Handle error
 			}
-
 			// Release the thread-safe function
 			tsfn->Release();
 		});
+		// auto callback = [](Napi::Env env, Function jsCallback) {
+		// 	jsCallback.Call({ });
+		// 	// We're finished with it.
+		// 	// delete value;
+		// };
 
+		// tsfn->BlockingCall(callback);
 		nativeThread.detach();
 
 		this->device_changed_callback_ = Persistent(info[0].As<Function>());
 		this->device_changed_callback_.SuppressDestruct();
 		// this->device_changed_callback_name_ = info[0].As<String>().ToString();
-		this->RegisterDevicesChangedCallbackMethod(info.Env());
+		this->RegisterDevicesChangedCallbackMethod(info.Env(), tsfn);
 
 		return info.This();
 	}
