@@ -79,8 +79,6 @@ class RSContext : public ObjectWrap<RSContext> {
 		if (this->type_ == kRecording)
 			this->mode_ = static_cast<rs2_recording_mode>(info[3].As<Number>().ToNumber().Uint32Value());
 
-		MainThreadCallback::Init();
-
 		if (this->ctx_) {
 			std::cerr << "Skipping creation of RSContext" << std::endl;
 			return;
