@@ -24,7 +24,12 @@ export interface RSSensor {
 }
 // tslint:disable-next-line: no-empty-interface
 export interface RSDevice {
-
+  destroy(): void;
+  getCameraInfo(info: number): string;
+  querySensors(): RSSensor[];
+  reset(): this;
+  supportsCameraInfo(info: number): boolean;
+  triggerErrorForTest(): void;
 }
 
 export interface RSDeviceList {

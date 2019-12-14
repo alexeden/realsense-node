@@ -116,7 +116,7 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 		  = GetNativeResult<int>(rs2_supports_device_info, &this->error_, this->dev_, camera_info, &this->error_);
 		if (this->error_) throw Napi::Error::New(info.Env(), "Error trying to get camera support info");
 
-		return on ? Boolean::New(info.Env(), true) : Boolean::New(info.Env(), false);
+		return Boolean::New(info.Env(), on);
 	}
 
 	Napi::Value Reset(const Napi::CallbackInfo& info) {
@@ -127,12 +127,12 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 	Napi::Value QuerySensors(const Napi::CallbackInfo& info) {
 		std::shared_ptr<rs2_sensor_list>
 		list(GetNativeResult<rs2_sensor_list*>(rs2_query_sensors, &this->error_, this->dev_, &this->error_), rs2_delete_sensor_list);
-		if (!list) return info.Env().Undefined();
+        auto array = Napi::Array::New(info.Env());
+		if (!list) return array;
 
 		auto size = GetNativeResult<int>(rs2_get_sensors_count, &this->error_, list.get(), &this->error_);
-		if (!size) return info.Env().Undefined();
+		if (!size) return array;
 
-		auto array = Napi::Array::New(info.Env());
 		for (int32_t i = 0; i < size; i++) {
 			rs2_sensor* sensor
 			  = GetNativeResult<rs2_sensor*>(rs2_create_sensor, &this->error_, list.get(), i, &this->error_);
