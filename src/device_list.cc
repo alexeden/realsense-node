@@ -16,6 +16,7 @@ class RSDeviceList : public ObjectWrap<RSDeviceList> {
 		  {
 			InstanceMethod("destroy", &RSDeviceList::Destroy),
 			InstanceMethod("contains", &RSDeviceList::Contains),
+			InstanceMethod("forEach", &RSDeviceList::ForEach),
 			InstanceMethod("length", &RSDeviceList::Length),
 			InstanceMethod("getDevice", &RSDeviceList::GetDevice),
 		  });
@@ -55,11 +56,6 @@ class RSDeviceList : public ObjectWrap<RSDeviceList> {
 		list_ = nullptr;
 	}
 
-	Napi::Value Destroy(const CallbackInfo& info) {
-		this->DestroyMe();
-		return info.Env().Undefined();
-	}
-
 	Napi::Value Contains(const CallbackInfo& info) {
 		auto dev = ObjectWrap<RSDevice>::Unwrap(info[0].As<Object>());
 		bool contains = GetNativeResult<int>(rs2_device_list_contains, &this->error_, this->list_, dev->dev_, &this->error_);
@@ -68,16 +64,43 @@ class RSDeviceList : public ObjectWrap<RSDeviceList> {
 		return Boolean::New(info.Env(), contains);
 	}
 
-	Napi::Value Length(const CallbackInfo& info) {
-		auto cnt = GetNativeResult<int>(rs2_get_device_count, &this->error_, this->list_, &this->error_);
-		return Number::New(info.Env(), cnt);
+	Napi::Value Destroy(const CallbackInfo& info) {
+		this->DestroyMe();
+		return info.Env().Undefined();
 	}
+
+    Napi::Value ForEach(const CallbackInfo& info) {
+        auto cb = info[0].As<Napi::Function>();
+
+        assert(cb.IsFunction());
+
+		auto length = GetNativeResult<int>(rs2_get_device_count, &this->error_, this->list_, &this->error_);
+
+        for (auto i = 0; i < length; i++) {
+            auto dev = GetNativeResult<rs2_device*>(rs2_create_device, &this->error_, this->list_, i, &this->error_);
+
+            auto rsDev = RSDevice::NewInstance(info.Env(), dev);
+
+            cb.Call(info.This(), {
+                rsDev,
+                Number::New(info.Env(), i)
+            });
+        }
+
+        return info.Env().Undefined();
+    }
+
 
 	Napi::Value GetDevice(const CallbackInfo& info) {
 		auto index = info[0].As<Number>().ToNumber().Uint32Value();
 		auto dev = GetNativeResult<rs2_device*>(rs2_create_device, &this->error_, this->list_, index, &this->error_);
 
 		return RSDevice::NewInstance(info.Env(), dev);
+	}
+
+	Napi::Value Length(const CallbackInfo& info) {
+		auto length = GetNativeResult<int>(rs2_get_device_count, &this->error_, this->list_, &this->error_);
+		return Number::New(info.Env(), length);
 	}
 
 	static FunctionReference constructor;

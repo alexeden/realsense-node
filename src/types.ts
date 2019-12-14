@@ -35,6 +35,7 @@ export interface RSDevice {
 export interface RSDeviceList {
   contains(device: RSDevice): boolean;
   destroy(): void;
+  forEach(callback: (device: RSDevice, index: number) => void): void;
   getDevice(index: number): RSDevice;
   length(): number;
 }

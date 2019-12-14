@@ -11,11 +11,14 @@ process
 
 console.log('Creating context...');
 const ctx = new addon.RSContext();
-console.log(ctx);
 
 console.log('Querying for devices...');
 const deviceList = ctx.queryDevices()
 console.log(`Device list length: ${deviceList.length()}`);
+
+deviceList.forEach((dev, i) => {
+  console.log(`Device #${i + 1}: `, dev);
+});
 
 ctx.onDevicesChanged((rmList, addList) => {
   if (rmList && typeof rmList.length === 'function') {
