@@ -20,6 +20,29 @@ export interface RSContext {
 
 // tslint:disable-next-line: no-empty-interface
 export interface RSSensor {
+  close(): void;
+  destroy(): void;
+  // getCameraInfo
+  // getDepthScale
+  // getOption
+  // getOptionDescription
+  // getOptionRange
+  // getOptionValueDescription
+  // getRegionOfInterest
+  // getStreamProfiles
+  // isDepthSensor
+  // isOptionReadonly
+  // isROISensor
+  // openMultipleStream
+  // openStream
+  // setNotificationCallback
+  // setOption
+  // setRegionOfInterest
+  // startWithCallback
+  // startWithSyncer
+  // stop
+  // supportsCameraInfo
+  // supportsOption
 
 }
 // tslint:disable-next-line: no-empty-interface

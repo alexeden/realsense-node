@@ -23,9 +23,9 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 		  {
 			InstanceMethod("destroy", &RSDevice::Destroy),
 			InstanceMethod("getCameraInfo", &RSDevice::GetCameraInfo),
-			InstanceMethod("supportsCameraInfo", &RSDevice::SupportsCameraInfo),
-			InstanceMethod("reset", &RSDevice::Reset),
 			InstanceMethod("querySensors", &RSDevice::QuerySensors),
+			InstanceMethod("reset", &RSDevice::Reset),
+			InstanceMethod("supportsCameraInfo", &RSDevice::SupportsCameraInfo),
 			InstanceMethod("triggerErrorForTest", &RSDevice::TriggerErrorForTest),
 			// InstanceMethod("spawnRecorderDevice", &RSDevice::SpawnRecorderDevice),
 

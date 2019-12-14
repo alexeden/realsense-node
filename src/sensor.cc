@@ -23,29 +23,29 @@ class RSSensor
 		  env,
 		  "RSSensor",
 		  {
+			InstanceMethod("close", &RSSensor::Close),
 			InstanceMethod("destroy", &RSSensor::Destroy),
-			InstanceMethod("openStream", &RSSensor::OpenStream),
-			InstanceMethod("openMultipleStream", &RSSensor::OpenMultipleStream),
 			InstanceMethod("getCameraInfo", &RSSensor::GetCameraInfo),
-			InstanceMethod("startWithSyncer", &RSSensor::StartWithSyncer),
-			InstanceMethod("startWithCallback", &RSSensor::StartWithCallback),
-			InstanceMethod("supportsOption", &RSSensor::SupportsOption),
+			InstanceMethod("getDepthScale", &RSSensor::GetDepthScale),
 			InstanceMethod("getOption", &RSSensor::GetOption),
-			InstanceMethod("setOption", &RSSensor::SetOption),
-			InstanceMethod("getOptionRange", &RSSensor::GetOptionRange),
-			InstanceMethod("isOptionReadonly", &RSSensor::IsOptionReadonly),
 			InstanceMethod("getOptionDescription", &RSSensor::GetOptionDescription),
+			InstanceMethod("getOptionRange", &RSSensor::GetOptionRange),
 			InstanceMethod("getOptionValueDescription", &RSSensor::GetOptionValueDescription),
+			InstanceMethod("getRegionOfInterest", &RSSensor::GetRegionOfInterest),
+			InstanceMethod("getStreamProfiles", &RSSensor::GetStreamProfiles),
+			InstanceMethod("isDepthSensor", &RSSensor::IsDepthSensor),
+			InstanceMethod("isOptionReadonly", &RSSensor::IsOptionReadonly),
+			InstanceMethod("isROISensor", &RSSensor::IsROISensor),
+			InstanceMethod("openMultipleStream", &RSSensor::OpenMultipleStream),
+			InstanceMethod("openStream", &RSSensor::OpenStream),
+			InstanceMethod("setNotificationCallback", &RSSensor::SetNotificationCallback),
+			InstanceMethod("setOption", &RSSensor::SetOption),
+			InstanceMethod("setRegionOfInterest", &RSSensor::SetRegionOfInterest),
+			InstanceMethod("startWithCallback", &RSSensor::StartWithCallback),
+			InstanceMethod("startWithSyncer", &RSSensor::StartWithSyncer),
 			InstanceMethod("stop", &RSSensor::Stop),
 			InstanceMethod("supportsCameraInfo", &RSSensor::SupportsCameraInfo),
-			InstanceMethod("getStreamProfiles", &RSSensor::GetStreamProfiles),
-			InstanceMethod("close", &RSSensor::Close),
-			InstanceMethod("setNotificationCallback", &RSSensor::SetNotificationCallback),
-			InstanceMethod("setRegionOfInterest", &RSSensor::SetRegionOfInterest),
-			InstanceMethod("getRegionOfInterest", &RSSensor::GetRegionOfInterest),
-			InstanceMethod("getDepthScale", &RSSensor::GetDepthScale),
-			InstanceMethod("isDepthSensor", &RSSensor::IsDepthSensor),
-			InstanceMethod("isROISensor", &RSSensor::IsROISensor),
+			InstanceMethod("supportsOption", &RSSensor::SupportsOption),
 		  });
 
 		constructor = Napi::Persistent(func);
@@ -59,7 +59,7 @@ class RSSensor
 		EscapableHandleScope scope(env);
 		Object instance = constructor.New({});
 
-		auto unwrapped	 = ObjectWrap<RSSensor>::Unwrap(instance);
+		auto unwrapped	   = ObjectWrap<RSSensor>::Unwrap(instance);
 		unwrapped->sensor_ = sensor;
 
 		return scope.Escape(napi_value(instance)).ToObject();
@@ -122,7 +122,6 @@ class RSSensor
 	}
 
   private:
-
 	void RegisterNotificationCallbackMethod();
 
 	void DestroyMe() {
@@ -190,13 +189,13 @@ class RSSensor
 		auto depth_frame	 = ObjectWrap<RSFrame>::Unwrap(info[2].ToObject());
 		auto video_frame	 = ObjectWrap<RSFrame>::Unwrap(info[3].ToObject());
 		auto disparity_frame = ObjectWrap<RSFrame>::Unwrap(info[4].ToObject());
-		auto motion_frame	= ObjectWrap<RSFrame>::Unwrap(info[5].ToObject());
+		auto motion_frame	 = ObjectWrap<RSFrame>::Unwrap(info[5].ToObject());
 		auto pose_frame		 = ObjectWrap<RSFrame>::Unwrap(info[6].ToObject());
 		if (frame && depth_frame && video_frame && disparity_frame && motion_frame && pose_frame) {
 			this->frame_			   = frame;
 			this->depth_frame_		   = depth_frame;
 			this->video_frame_		   = video_frame;
-			this->disparity_frame_	 = disparity_frame;
+			this->disparity_frame_	   = disparity_frame;
 			this->motion_frame_		   = motion_frame;
 			this->pose_frame_		   = pose_frame;
 			this->frame_callback_name_ = std::string(info[0].ToString());
@@ -220,7 +219,7 @@ class RSSensor
 	}
 
 	Napi::Value OpenMultipleStream(const CallbackInfo& info) {
-		auto array   = info[0].As<Array>();
+		auto array	 = info[0].As<Array>();
 		uint32_t len = array.Length();
 		std::vector<const rs2_stream_profile*> profs;
 		for (uint32_t i = 0; i < len; i++) {
@@ -247,7 +246,7 @@ class RSSensor
 		if (!list) return info.Env().Undefined();
 
 		int32_t size = GetNativeResult<int>(rs2_get_stream_profiles_count, &this->error_, list, &this->error_);
-		auto array   = Array::New(info.Env());
+		auto array	 = Array::New(info.Env());
 		for (int32_t i = 0; i < size; i++) {
 			rs2_stream_profile* profile
 			  = const_cast<rs2_stream_profile*>(rs2_get_stream_profile(list, i, &this->error_));
