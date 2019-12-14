@@ -12,11 +12,9 @@ using namespace Napi;
 class DevicesChangedCallback : public rs2_devices_changed_callback {
   public:
 	std::shared_ptr<ThreadSafeCallback> fn_;
-	RSContext* ctx_;
 
-	DevicesChangedCallback(RSContext* context, std::shared_ptr<ThreadSafeCallback> fn)
-	  : ctx_(context)
-	  , fn_(fn) {
+	DevicesChangedCallback(std::shared_ptr<ThreadSafeCallback> fn)
+	  : fn_(fn) {
 		std::cerr << __FILE__ << ":" << __LINE__ << "\tDevicesChangedCallback::DevicesChangedCallback" << std::endl;
 	}
 
@@ -55,7 +53,7 @@ class DevicesChangedCallback : public rs2_devices_changed_callback {
 
 void RSContext::RegisterDevicesChangedCallbackMethod(std::shared_ptr<ThreadSafeCallback> callback) {
 	std::cerr << "RSContext::RegisterDevicesChangedCallbackMethod" << std::endl;
-	rs2_set_devices_changed_callback_cpp(this->ctx_, new DevicesChangedCallback(this, callback), &this->error_);
+	rs2_set_devices_changed_callback_cpp(this->ctx_, new DevicesChangedCallback(callback), &this->error_);
 }
 
 #endif
