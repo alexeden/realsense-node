@@ -132,7 +132,6 @@ class RSContext : public ObjectWrap<RSContext> {
 	}
 
 	Napi::Value OnDevicesChanged(const CallbackInfo& info) {
-		std::cerr << "RSContext::OnDevicesChanged" <<  std::endl;
         auto callback = std::make_shared<ThreadSafeCallback>(info[0].As<Function>());
         this->RegisterDevicesChangedCallbackMethod(callback);
 

@@ -6,14 +6,29 @@ export interface RealSenseAddon {
   registerErrorCallback: ErrorCallbackRegistration;
 }
 
+type DevicesChangedCallback = (removed: RSDeviceList, added: RSDeviceList) => void;
+
+export interface RSContext {
+  createDeviceFromSensor(sensor: RSSensor): RSDevice;
+  destroy(): void;
+  loadDeviceFile(path: string): RSDevice;
+  onDevicesChanged(devicesChangedCallback: DevicesChangedCallback): this;
+  queryDevices(): RSDeviceList;
+  unloadDeviceFile(path: string): void;
+}
+
+// tslint:disable-next-line: no-empty-interface
+export interface RSSensor {
+
+}
 // tslint:disable-next-line: no-empty-interface
 export interface RSDevice {
 
 }
 
 export interface RSDeviceList {
-  destroy(): void;
   contains(device: RSDevice): boolean;
-  length(): number;
+  destroy(): void;
   getDevice(index: number): RSDevice;
+  length(): number;
 }
