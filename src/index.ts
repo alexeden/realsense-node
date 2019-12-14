@@ -11,6 +11,7 @@ addon.registerErrorCallback(
   'callback'
 );
 
+export * from './types';
 export {
   addon,
 };
