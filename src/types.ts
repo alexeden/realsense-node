@@ -3,6 +3,7 @@ type ErrorCallbackRegistration = <T extends object>(recv: T, fn: keyof T) => voi
 export interface RealSenseAddon {
   cleanup(): void;
   getTime(): number;
+  RSContext: new () => RSContext;
   registerErrorCallback: ErrorCallbackRegistration;
 }
 
