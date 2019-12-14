@@ -1,7 +1,6 @@
 #ifndef DEVICE_H
 #define DEVICE_H
 
-#include "main_thread_callback.cc"
 #include "sensor.cc"
 #include "utils.cc"
 #include <librealsense2/hpp/rs_types.hpp>
