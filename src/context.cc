@@ -117,7 +117,7 @@ class RSContext : public ObjectWrap<RSContext> {
 	}
 
   private:
-	void RegisterDevicesChangedCallbackMethod(Napi::Env env, std::shared_ptr<ThreadSafeCallback> fn);
+	void RegisterDevicesChangedCallbackMethod(std::shared_ptr<ThreadSafeCallback> fn);
 
 	void DestroyMe() {
 		if (error_) rs2_free_error(error_);
@@ -181,7 +181,7 @@ class RSContext : public ObjectWrap<RSContext> {
 		// this->device_changed_callback_ = Persistent(info[0].As<Function>());
 		// this->device_changed_callback_.SuppressDestruct();
 		// // this->device_changed_callback_name_ = info[0].As<String>().ToString();
-		this->RegisterDevicesChangedCallbackMethod(info.Env(), callback);
+		this->RegisterDevicesChangedCallbackMethod(callback);
 
 		return info.This();
 	}
