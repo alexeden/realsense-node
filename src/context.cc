@@ -4,6 +4,7 @@
 #include "device.cc"
 #include "device_list.cc"
 #include "main_thread_callback.cc"
+#include "napi-thread-safe-callback.hpp"
 #include "utils.cc"
 #include <iostream>
 #include <librealsense2/h/rs_internal.h>
@@ -116,7 +117,7 @@ class RSContext : public ObjectWrap<RSContext> {
 	}
 
   private:
-	void RegisterDevicesChangedCallbackMethod(Napi::Env env, std::shared_ptr<ThreadSafeFunction> fn);
+	void RegisterDevicesChangedCallbackMethod(Napi::Env env, std::shared_ptr<ThreadSafeCallback> fn);
 
 	void DestroyMe() {
 		if (error_) rs2_free_error(error_);
@@ -134,50 +135,53 @@ class RSContext : public ObjectWrap<RSContext> {
 	Napi::Value OnDevicesChanged(const CallbackInfo& info) {
 		std::cerr << "RSContext::OnDevicesChanged" <<  std::endl;
 		std::cerr << "thread id: " << std::this_thread::get_id() << std::endl;
-		auto tsfn = std::make_shared<ThreadSafeFunction>(ThreadSafeFunction::New(
-		  info.Env(),
-		  info[0].As<Function>(),			  // JavaScript function called asynchronously
-		  Object(),							  // Receiver
-		  "OnDevicesChanged",					  // Name
-		  1,								  // Queue size of 1
-		  1,								  // Only one thread will use this initially
-		  (void*) nullptr,					  // No finalize data
-		  [](Napi::Env env, void*, void*) {}, // Finalizer
-		  (void*) nullptr					  // No context
-		  ));
+        auto callback = std::make_shared<ThreadSafeCallback>(info[0].As<Function>());
+		// auto tsfn = std::make_shared<ThreadSafeFunction>(ThreadSafeFunction::New(
+		//   info.Env(),
+		//   info[0].As<Function>(),			  // JavaScript function called asynchronously
+		//   Object(),							  // Receiver
+		//   "OnDevicesChanged",					  // Name
+		//   1,								  // Queue size of 1
+		//   1,								  // Only one thread will use this initially
+		//   (void*) nullptr,					  // No finalize data
+		//   [](Napi::Env env, void*, void*) {}, // Finalizer
+		//   (void*) nullptr					  // No context
+		//   ));
 
-		auto count = 5;
+		// auto count = 5;
 
+        // std::thread([callback] {
+        //     try {
+
+        //     }
+        //     catch (error) {
+        //         //
+        //     }
+        // })
+        // .detach();
 		// Create a new thread
-		std::thread nativeThread([tsfn] {
-			// Transform native data into JS data
-			auto callback = [](Napi::Env env, Function jsCallback) {
-				jsCallback.Call({ });
-				// We're finished with it.
-				// delete value;
-			};
-			std::this_thread::sleep_for(std::chrono::seconds(1));
+		// std::thread nativeThread([tsfn] {
+		// 	// Transform native data into JS data
+		// 	auto callback = [](Napi::Env env, Function jsCallback) {
+		// 		jsCallback.Call({ });
+		// 	};
+		// 	std::this_thread::sleep_for(std::chrono::seconds(1));
 
-			napi_status status = tsfn->BlockingCall(callback);
-			if (status != napi_status::napi_ok) {
-				// Handle error
-			}
-			// Release the thread-safe function
-			tsfn->Release();
-		});
-		// auto callback = [](Napi::Env env, Function jsCallback) {
-		// 	jsCallback.Call({ });
-		// 	// We're finished with it.
-		// 	// delete value;
-		// };
+		// 	napi_status status = tsfn->BlockingCall(callback);
+		// 	if (status != napi_status::napi_ok) {
+		// 		// Handle error
+		// 	}
+		// 	// Release the thread-safe function
+		// 	tsfn->Release();
+		// });
 
 		// tsfn->BlockingCall(callback);
-		nativeThread.detach();
+		// nativeThread.detach();
 
-		this->device_changed_callback_ = Persistent(info[0].As<Function>());
-		this->device_changed_callback_.SuppressDestruct();
-		// this->device_changed_callback_name_ = info[0].As<String>().ToString();
-		this->RegisterDevicesChangedCallbackMethod(info.Env(), tsfn);
+		// this->device_changed_callback_ = Persistent(info[0].As<Function>());
+		// this->device_changed_callback_.SuppressDestruct();
+		// // this->device_changed_callback_name_ = info[0].As<String>().ToString();
+		this->RegisterDevicesChangedCallbackMethod(info.Env(), callback);
 
 		return info.This();
 	}
