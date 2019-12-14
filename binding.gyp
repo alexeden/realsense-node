@@ -12,6 +12,7 @@
       'include_dirs': [
         "./librealsense/include",
         "<!@(node -p \"require('node-addon-api').include\")",
+        "<!@(node -p \"require('napi-thread-safe-callback').include\")",
       ],
       'dependencies': [
         "<!(node -p \"require('node-addon-api').gyp\")",
