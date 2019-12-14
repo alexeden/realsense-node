@@ -5,3 +5,15 @@ export interface RealSenseAddon {
   getTime(): number;
   registerErrorCallback: ErrorCallbackRegistration;
 }
+
+// tslint:disable-next-line: no-empty-interface
+export interface RSDevice {
+
+}
+
+export interface RSDeviceList {
+  destroy(): void;
+  contains(device: RSDevice): boolean;
+  length(): number;
+  getDevice(index: number): RSDevice;
+}
