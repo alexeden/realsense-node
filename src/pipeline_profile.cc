@@ -16,9 +16,9 @@ class RSPipelineProfile : public ObjectWrap<RSPipelineProfile> {
 		  env,
 		  "RSPipelineProfile",
 		  {
-			InstanceMethod("getStreams", &RSPipelineProfile::GetStreams),
-			InstanceMethod("getDevice", &RSPipelineProfile::GetDevice),
 			InstanceMethod("destroy", &RSPipelineProfile::Destroy),
+			InstanceMethod("getDevice", &RSPipelineProfile::GetDevice),
+			InstanceMethod("getStreams", &RSPipelineProfile::GetStreams),
 		  });
 
 		constructor = Napi::Persistent(func);
@@ -49,6 +49,11 @@ class RSPipelineProfile : public ObjectWrap<RSPipelineProfile> {
 	}
 
   private:
+	static FunctionReference constructor;
+
+	rs2_pipeline_profile* pipeline_profile_;
+	rs2_error* error_;
+
 	void DestroyMe() {
 		if (error_) rs2_free_error(error_);
 		error_ = nullptr;
@@ -59,7 +64,15 @@ class RSPipelineProfile : public ObjectWrap<RSPipelineProfile> {
 
 	Napi::Value Destroy(const CallbackInfo& info) {
 		this->DestroyMe();
-		return info.Env().Undefined();
+		return info.This();
+	}
+
+	Napi::Value GetDevice(const CallbackInfo& info) {
+		rs2_device* dev = GetNativeResult<
+		  rs2_device*>(rs2_pipeline_profile_get_device, &this->error_, this->pipeline_profile_, &this->error_);
+		if (!dev) return info.Env().Undefined();
+
+		return RSDevice::NewInstance(info.Env(), dev);
 	}
 
 	Napi::Value GetStreams(const CallbackInfo& info) {
@@ -80,20 +93,6 @@ class RSPipelineProfile : public ObjectWrap<RSPipelineProfile> {
 
 		return array;
 	}
-
-	Napi::Value GetDevice(const CallbackInfo& info) {
-		rs2_device* dev = GetNativeResult<
-		  rs2_device*>(rs2_pipeline_profile_get_device, &this->error_, this->pipeline_profile_, &this->error_);
-		if (!dev) return info.Env().Undefined();
-
-		return RSDevice::NewInstance(info.Env(), dev);
-	}
-
-  private:
-	static FunctionReference constructor;
-
-	rs2_pipeline_profile* pipeline_profile_;
-	rs2_error* error_;
 };
 
 Napi::FunctionReference RSPipelineProfile::constructor;

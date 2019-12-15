@@ -85,10 +85,12 @@ export interface RSPipeline {
   waitForFrames(frameset: RSFrameSet): boolean;
 }
 
-// tslint:disable-next-line: no-empty-interface
 export interface RSPipelineProfile {
-
+  destroy(): this;
+  getDevice(): RSDevice;
+  getStreams(): RSStreamProfile;
 }
+
 export interface RSRegionOfInterest {
   maxX: number;
   maxY: number;
