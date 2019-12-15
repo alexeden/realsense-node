@@ -135,15 +135,15 @@ class RSSensor
 
 	Napi::Value Close(const CallbackInfo& info) {
 		CallNativeFunc(rs2_close, &this->error_, this->sensor_, &this->error_);
-		return info.Env().Undefined();
+		return info.This();
 	}
 
-    Napi::Value Destroy(const CallbackInfo& info) {
+	Napi::Value Destroy(const CallbackInfo& info) {
 		this->DestroyMe();
-		return info.Env().Undefined();
+		return info.This();
 	}
 
-    Napi::Value GetCameraInfo(const CallbackInfo& info) {
+	Napi::Value GetCameraInfo(const CallbackInfo& info) {
 		int32_t camera_info = info[0].ToNumber().Int32Value();
 
 		auto value = GetNativeResult<const char*>(
@@ -168,7 +168,7 @@ class RSSensor
 		return this->GetOptionDescriptionInternal(info);
 	}
 
-    Napi::Value GetOptionRange(const CallbackInfo& info) {
+	Napi::Value GetOptionRange(const CallbackInfo& info) {
 		return this->GetOptionRangeInternal(info);
 	}
 
@@ -176,7 +176,7 @@ class RSSensor
 		return this->GetOptionValueDescriptionInternal(info);
 	}
 
-    Napi::Value GetRegionOfInterest(const CallbackInfo& info) {
+	Napi::Value GetRegionOfInterest(const CallbackInfo& info) {
 		int32_t minx = 0;
 		int32_t miny = 0;
 		int32_t maxx = 0;
@@ -187,7 +187,7 @@ class RSSensor
 		return RSRegionOfInterest(info.Env(), minx, miny, maxx, maxy).GetObject();
 	}
 
-    Napi::Value GetStreamProfiles(const CallbackInfo& info) {
+	Napi::Value GetStreamProfiles(const CallbackInfo& info) {
 		rs2_stream_profile_list* list = this->profile_list_;
 		if (!list) {
 			list = GetNativeResult<
@@ -236,7 +236,7 @@ class RSSensor
 			profs.push_back(profile->profile_);
 		}
 		CallNativeFunc(rs2_open_multiple, &this->error_, this->sensor_, profs.data(), len, &this->error_);
-		return info.Env().Undefined();
+		return info.This();
 	}
 
 	Napi::Value OpenStream(const CallbackInfo& info) {
@@ -244,7 +244,7 @@ class RSSensor
 		if (!profile) return info.Env().Undefined();
 
 		CallNativeFunc(rs2_open, &this->error_, this->sensor_, profile->profile_, &this->error_);
-		return info.Env().Undefined();
+		return info.This();
 	}
 
 	Napi::Value SetNotificationCallback(const CallbackInfo& info) {
@@ -254,7 +254,9 @@ class RSSensor
 	}
 
 	Napi::Value SetOption(const CallbackInfo& info) {
-		return this->SetOptionInternal(info);
+		this->SetOptionInternal(info);
+
+		return info.This();
 	}
 
 	Napi::Value SetRegionOfInterest(const CallbackInfo& info) {
@@ -264,7 +266,7 @@ class RSSensor
 		int32_t maxy = info[3].ToNumber().Int32Value();
 
 		CallNativeFunc(rs2_set_region_of_interest, &this->error_, this->sensor_, minx, miny, maxx, maxy, &this->error_);
-		return info.Env().Undefined();
+		return info.This();
 	}
 
 	Napi::Value StartWithCallback(const CallbackInfo& info) {
@@ -297,25 +299,26 @@ class RSSensor
 		  this->sensor_,
 		  new FrameCallbackForProcessingBlock(syncer->syncer_),
 		  &this->error_);
-		return info.Env().Undefined();
+
+		return info.This();
 	}
 
 	Napi::Value Stop(const CallbackInfo& info) {
 		CallNativeFunc(rs2_stop, &this->error_, this->sensor_, &this->error_);
-		return info.Env().Undefined();
+		return info.This();
 	}
 
-    Napi::Value SupportsCameraInfo(const CallbackInfo& info) {
+	Napi::Value SupportsCameraInfo(const CallbackInfo& info) {
 		int32_t camera_info = info[0].ToNumber().Int32Value();
 		int32_t on			= GetNativeResult<
 		   int>(rs2_supports_sensor_info, &this->error_, this->sensor_, (rs2_camera_info) camera_info, &this->error_);
+
 		return Boolean::New(info.Env(), on ? true : false);
 	}
 
-    Napi::Value SupportsOption(const CallbackInfo& info) {
+	Napi::Value SupportsOption(const CallbackInfo& info) {
 		return this->SupportsOptionInternal(info);
 	}
-
 
   private:
 	static FunctionReference constructor;

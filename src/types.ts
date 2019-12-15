@@ -18,31 +18,53 @@ export interface RSContext {
   unloadDeviceFile(path: string): void;
 }
 
-// tslint:disable-next-line: no-empty-interface
+export interface RSOptionRange {
+  defaultValue: number;
+  maxValue: number;
+  minValue: number;
+  step: number;
+}
+
+export interface RSRegionOfInterest {
+  maxX: number;
+  maxY: number;
+  minX: number;
+  minY: number;
+}
+
 export interface RSSensor {
-  close(): void;
-  destroy(): void;
-  // getCameraInfo
-  // getDepthScale
-  // getOption
-  // getOptionDescription
-  // getOptionRange
-  // getOptionValueDescription
-  // getRegionOfInterest
-  // getStreamProfiles
-  // isDepthSensor
-  // isOptionReadonly
-  // isROISensor
-  // openMultipleStream
-  // openStream
+  close(): this;
+  destroy(): this;
+  getCameraInfo(index: number): string;
+  getDepthScale(): number;
+  getOption(option: number): number;
+  getOptionDescription(option: number): string;
+  getOptionRange(option: number): RSOptionRange;
+  getOptionValueDescription(option: number, value: number): string;
+  getRegionOfInterest(): RSRegionOfInterest;
+  getStreamProfiles(): RSStreamProfile;
+  isDepthSensor(): boolean;
+  isOptionReadonly(option: number): boolean;
+  isROISensor(): boolean;
+  openMultipleStream(streams: RSStreamProfile[]): this;
+  openStream(stream: RSStreamProfile): this;
   // setNotificationCallback
-  // setOption
-  // setRegionOfInterest
+  setOption(option: number, value: number): this;
+  setRegionOfInterest(minx: number, miny: number, maxx: number, maxy: number): this;
   // startWithCallback
-  // startWithSyncer
-  // stop
-  // supportsCameraInfo
-  // supportsOption
+  startWithSyncer(syncer: RSSyncer): this;
+  stop(): void;
+  supportsCameraInfo(camera: number): boolean;
+  supportsOption(option: number): boolean;
+}
+
+
+// tslint:disable-next-line: no-empty-interface
+export interface RSStreamProfile {
+}
+
+// tslint:disable-next-line: no-empty-interface
+export interface RSSyncer {
 
 }
 // tslint:disable-next-line: no-empty-interface
