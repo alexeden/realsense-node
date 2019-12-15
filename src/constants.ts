@@ -1,3 +1,100 @@
+export enum RSCameraInfo {
+  /** Friendly name */
+  Name,
+  /** Device serial number */
+  SerialNumber,
+  /** Primary firmware version */
+  FirmwareVersion,
+  /** Recommended firmware version */
+  RecommendedFirmwareVersion,
+  /** Unique identifier of the port the device is connected to (platform specific) */
+  PhysicalPort,
+  /** If device supports firmware logging, this is the command to send to get logs from firmware */
+  DebugOpCode,
+  /** True iff the device is in advanced mode */
+  AdvancedMode,
+  /** Product ID as reported in the USB descriptor */
+  ProductId,
+  /** True iff EEPROM is locked */
+  CameraLocked,
+  /** Designated USB specification: USB2/USB3 */
+  UsbTypeDescriptor,
+  /** Device product line D400/SR300/L500/T200 */
+  ProductLine,
+  /** ASIC serial number */
+  AsicSerialNumber,
+  /** Firmware update ID */
+  FirmwareUpdateId,
+}
+
+export enum RSFormat {
+  /** When passed to enable stream, librealsense will try to provide best suited format */
+  ANY,
+  /** 16-bit linear depth values. The depth is meters is equal to depth scale * pixel value. */
+  Z16,
+  /** 16-bit float-point disparity values. Depth->Disparity conversion : Disparity = Baseline*FocalLength/Depth. */
+  DISPARITY16,
+  /** 32-bit floating point 3D coordinates. */
+  XYZ32F,
+  /**
+   * 32-bit y0, u, y1, v data for every two pixels. Similar to YUV422 but packed in a different
+   * order - https://en.wikipedia.org/wiki/YUV
+   */
+  YUYV,
+  /** 8-bit red, green and blue channels */
+  RGB8,
+  /** 8-bit blue, green, and red channels -- suitable for OpenCV */
+  BGR8,
+  /** 8-bit red, green and blue channels + constant alpha channel equal to FF */
+  RGBA8,
+  /** 8-bit blue, green, and red channels + constant alpha channel equal to FF */
+  BGRA8,
+  /** 8-bit per-pixel grayscale image */
+  Y8,
+  /** 16-bit per-pixel grayscale image */
+  Y16,
+  /** Four 10 bits per pixel luminance values packed into a 5-byte macropixel */
+  RAW10,
+  /** 16-bit raw image */
+  RAW16,
+  /** 8-bit raw image */
+  RAW8,
+  /** Similar to the standard YUYV pixel format, but packed in a different order */
+  UYVY,
+  /** Raw data from the motion sensor */
+  MOTION_RAW,
+  /** Motion data packed as 3 32-bit float values, for X, Y, and Z axis */
+  MOTION_XYZ32F,
+  /** Raw data from the external sensors hooked to one of the GPIO's */
+  GPIO_RAW,
+  /**
+   * Pose data packed as floats array, containing translation vector, rotation quaternion and
+   * prediction velocities and accelerations vectors
+   */
+  SIX_DOF,
+  /** 32-bit float-point disparity values. Depth->Disparity conversion : Disparity = Baseline*FocalLength/Depth */
+  DISPARITY32,
+  /**
+   * 16-bit per-pixel grayscale image unpacked from 10 bits per pixel packed ([8:8:8:8:2222])
+   * grey-scale image. The data is unpacked to LSB and padded with 6 zero bits
+   */
+  Y10BPACK,
+  /** 32-bit float-point depth distance value.  */
+  DISTANCE,
+  /** Bitstream encoding for video in which an image of each frame is encoded as JPEG-DIB   */
+  MJPEG,
+  /** 8-bit per pixel interleaved. 8-bit left, 8-bit right.  */
+  Y8I,
+  /** 12-bit per pixel interleaved. 12-bit left, 12-bit right. Each pixel is stored in a 24-bit word in little-endian order. */
+  Y12I,
+  /** multi-planar Depth 16bit + IR 10bit.  */
+  INZI,
+  /** 8-bit IR stream.  */
+  INVI,
+  /** Grey-scale image as a bit-packed array. 4 pixel data stream taking 5 bytes */
+  W10,
+}
+
 export enum RSLogSeverity {
   /** Detailed information about ordinary operations */
   Debug,
@@ -168,4 +265,26 @@ export enum RSOption {
   ZeroOrderEnabled,
   /** Preserve previous map when starting  */
   EnableMapPreservation,
+}
+
+export enum RSStream {
+  Any,
+  /** Native stream of depth data produced by RealSense device */
+  Depth,
+  /** Native stream of color data captured by RealSense device */
+  Color,
+  /** Native stream of infrared data captured by RealSense device */
+  Infrared,
+  /** Native stream of fish-eye (wide) data captured from the dedicate motion camera */
+  Fisheye,
+  /** Native stream of gyroscope motion data produced by RealSense device */
+  Gyro,
+  /** Native stream of accelerometer motion data produced by RealSense device */
+  Accel,
+  /** Signals from external device connected through GPIO */
+  Gpio,
+  /** 6 Degrees of Freedom pose data, calculated by RealSense device */
+  Pose,
+  /** 4 bit per-pixel depth confidence level */
+  Confidence,
 }

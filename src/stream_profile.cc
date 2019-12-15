@@ -2,7 +2,6 @@
 #define STREAM_PROFILE_H
 
 #include "dicts.cc"
-// #include "stream_profile.cc"
 #include "utils.cc"
 #include <iostream>
 #include <librealsense2/h/rs_internal.h>
@@ -17,22 +16,22 @@ class RSStreamProfile : public ObjectWrap<RSStreamProfile> {
 	static Object Init(Napi::Env env, Object exports) {
 		Napi::Function func = DefineClass(
 		  env,
-		  "RSSyncer",
+		  "RSStreamProfile",
 		  {
 			InstanceMethod("destroy", &RSStreamProfile::Destroy),
-			InstanceMethod("stream", &RSStreamProfile::Stream),
 			InstanceMethod("format", &RSStreamProfile::Format),
 			InstanceMethod("fps", &RSStreamProfile::Fps),
-			InstanceMethod("index", &RSStreamProfile::Index),
-			InstanceMethod("uniqueID", &RSStreamProfile::UniqueID),
-			InstanceMethod("isDefault", &RSStreamProfile::IsDefault),
-			InstanceMethod("isVideoProfile", &RSStreamProfile::IsVideoProfile),
-			InstanceMethod("isMotionProfile", &RSStreamProfile::IsMotionProfile),
-			InstanceMethod("width", &RSStreamProfile::Width),
-			InstanceMethod("height", &RSStreamProfile::Height),
 			InstanceMethod("getExtrinsicsTo", &RSStreamProfile::GetExtrinsicsTo),
-			InstanceMethod("getVideoStreamIntrinsics", &RSStreamProfile::GetVideoStreamIntrinsics),
 			InstanceMethod("getMotionIntrinsics", &RSStreamProfile::GetMotionIntrinsics),
+			InstanceMethod("getVideoStreamIntrinsics", &RSStreamProfile::GetVideoStreamIntrinsics),
+			InstanceMethod("height", &RSStreamProfile::Height),
+			InstanceMethod("index", &RSStreamProfile::Index),
+			InstanceMethod("isDefault", &RSStreamProfile::IsDefault),
+			InstanceMethod("isMotionProfile", &RSStreamProfile::IsMotionProfile),
+			InstanceMethod("isVideoProfile", &RSStreamProfile::IsVideoProfile),
+			InstanceMethod("stream", &RSStreamProfile::Stream),
+			InstanceMethod("uniqueID", &RSStreamProfile::UniqueID),
+			InstanceMethod("width", &RSStreamProfile::Width),
 		  });
 		constructor = Napi::Persistent(func);
 		constructor.SuppressDestruct();
@@ -103,81 +102,8 @@ class RSStreamProfile : public ObjectWrap<RSStreamProfile> {
 	}
 
   private:
+  	friend class RSSensor;
 
-	void DestroyMe() {
-		if (error_) rs2_free_error(error_);
-		error_ = nullptr;
-		if (profile_ && own_profile_) rs2_delete_stream_profile(profile_);
-		profile_ = nullptr;
-	}
-
-	Napi::Value Destroy(const CallbackInfo& info) {
-		this->DestroyMe();
-		return info.Env().Undefined();
-	}
-
-	Napi::Value Stream(const CallbackInfo& info) {
-		return Number::New(info.Env(), this->stream_);
-	}
-	Napi::Value Format(const CallbackInfo& info) {
-		return Number::New(info.Env(), this->format_);
-	}
-	Napi::Value Fps(const CallbackInfo& info) {
-		return Number::New(info.Env(), this->fps_);
-	}
-	Napi::Value Index(const CallbackInfo& info) {
-		return Number::New(info.Env(), this->index_);
-	}
-	Napi::Value UniqueID(const CallbackInfo& info) {
-		return Number::New(info.Env(), this->unique_id_);
-	}
-	Napi::Value IsDefault(const CallbackInfo& info) {
-		return Boolean::New(info.Env(), this->is_default_);
-	}
-	Napi::Value IsVideoProfile(const CallbackInfo& info) {
-		return Boolean::New(info.Env(), this->is_video_);
-	}
-	Napi::Value IsMotionProfile(const CallbackInfo& info) {
-		return Boolean::New(info.Env(), this->is_motion_);
-	}
-	Napi::Value Width(const CallbackInfo& info) {
-		return Number::New(info.Env(), this->width_);
-	}
-	Napi::Value Height(const CallbackInfo& info) {
-		return Number::New(info.Env(), this->height_);
-	}
-
-	Napi::Value GetExtrinsicsTo(const CallbackInfo& info) {
-		auto to = ObjectWrap<RSStreamProfile>::Unwrap(info[0].ToObject());
-		if (!to) return info.Env().Undefined();
-
-		rs2_extrinsics res;
-		CallNativeFunc(rs2_get_extrinsics, &this->error_, this->profile_, to->profile_, &res, &this->error_);
-		if (this->error_) return info.Env().Undefined();
-
-		RSExtrinsics rsres(info.Env(), res);
-		return rsres.GetObject();
-	}
-
-	Napi::Value GetVideoStreamIntrinsics(const CallbackInfo& info) {
-		rs2_intrinsics intr;
-		CallNativeFunc(rs2_get_video_stream_intrinsics, &this->error_, this->profile_, &intr, &this->error_);
-		if (this->error_) return info.Env().Undefined();
-
-		RSIntrinsics res(info.Env(), intr);
-		return res.GetObject();
-	}
-
-	Napi::Value GetMotionIntrinsics(const CallbackInfo& info) {
-		rs2_motion_device_intrinsic output;
-		CallNativeFunc(rs2_get_motion_intrinsics, &this->error_, this->profile_, &output, &this->error_);
-		if (this->error_) return info.Env().Undefined();
-
-		RSMotionIntrinsics intrinsics(info.Env(), &output);
-		return intrinsics.GetObject();
-	}
-
-  private:
 	static FunctionReference constructor;
 
 	rs2_error* error_;
@@ -194,7 +120,87 @@ class RSStreamProfile : public ObjectWrap<RSStreamProfile> {
 	bool own_profile_;
 	bool is_motion_;
 
-	friend class RSSensor;
+	void DestroyMe() {
+		if (error_) rs2_free_error(error_);
+		error_ = nullptr;
+		if (profile_ && own_profile_) rs2_delete_stream_profile(profile_);
+		profile_ = nullptr;
+	}
+
+	Napi::Value Destroy(const CallbackInfo& info) {
+		this->DestroyMe();
+		return info.This();
+	}
+
+	Napi::Value Format(const CallbackInfo& info) {
+		return Number::New(info.Env(), this->format_);
+	}
+
+	Napi::Value Fps(const CallbackInfo& info) {
+		return Number::New(info.Env(), this->fps_);
+	}
+
+	Napi::Value GetExtrinsicsTo(const CallbackInfo& info) {
+		auto to = ObjectWrap<RSStreamProfile>::Unwrap(info[0].ToObject());
+		if (!to) return info.Env().Undefined();
+
+		rs2_extrinsics res;
+		CallNativeFunc(rs2_get_extrinsics, &this->error_, this->profile_, to->profile_, &res, &this->error_);
+		if (this->error_) return info.Env().Undefined();
+
+		RSExtrinsics rsres(info.Env(), res);
+		return rsres.GetObject();
+	}
+
+	Napi::Value GetMotionIntrinsics(const CallbackInfo& info) {
+		rs2_motion_device_intrinsic output;
+		CallNativeFunc(rs2_get_motion_intrinsics, &this->error_, this->profile_, &output, &this->error_);
+		if (this->error_) return info.Env().Undefined();
+
+		RSMotionIntrinsics intrinsics(info.Env(), &output);
+		return intrinsics.GetObject();
+	}
+
+	Napi::Value GetVideoStreamIntrinsics(const CallbackInfo& info) {
+		rs2_intrinsics intr;
+		CallNativeFunc(rs2_get_video_stream_intrinsics, &this->error_, this->profile_, &intr, &this->error_);
+		if (this->error_) return info.Env().Undefined();
+
+		RSIntrinsics res(info.Env(), intr);
+		return res.GetObject();
+	}
+
+	Napi::Value Height(const CallbackInfo& info) {
+		return Number::New(info.Env(), this->height_);
+	}
+
+	Napi::Value Index(const CallbackInfo& info) {
+		return Number::New(info.Env(), this->index_);
+	}
+
+	Napi::Value IsDefault(const CallbackInfo& info) {
+		return Boolean::New(info.Env(), this->is_default_);
+	}
+
+	Napi::Value IsMotionProfile(const CallbackInfo& info) {
+		return Boolean::New(info.Env(), this->is_motion_);
+	}
+
+	Napi::Value IsVideoProfile(const CallbackInfo& info) {
+		return Boolean::New(info.Env(), this->is_video_);
+	}
+
+	Napi::Value Stream(const CallbackInfo& info) {
+		return Number::New(info.Env(), this->stream_);
+	}
+
+	Napi::Value UniqueID(const CallbackInfo& info) {
+		return Number::New(info.Env(), this->unique_id_);
+	}
+
+	Napi::Value Width(const CallbackInfo& info) {
+		return Number::New(info.Env(), this->width_);
+	}
 };
 
 Napi::FunctionReference RSStreamProfile::constructor;
