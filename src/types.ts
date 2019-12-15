@@ -54,7 +54,39 @@ export interface RSExtrinsics {
 
 // tslint:disable-next-line: no-empty-interface
 export interface RSFrame {
-
+  canGetPoints(): boolean;
+  destroy(): this;
+  exportToPly(filename: string, frame: RSFrame): this;
+  getBaseLine(): number;
+  getBitsPerPixel(): number;
+  getData(): Uint8Array;
+  getDistance(x: number, y: number): number;
+  // getFrameMetadata
+  getFrameNumber(): number;
+  getHeight(): number;
+  // getMotionData
+  getPointsCount(): number;
+  // getPoseData
+  getStreamProfile(): RSStreamProfile;
+  getStrideInBytes(): number;
+  getTexCoordBufferLen(): number;
+  getTextureCoordinates(): Float32Array;
+  getTimestamp(): number;
+  getTimestampDomain(): number;
+  getVertices(): Float32Array;
+  getVerticesBufferLen(): number;
+  getWidth(): number;
+  isDepthFrame(): boolean;
+  isDisparityFrame(): boolean;
+  isMotionFrame(): boolean;
+  isPoseFrame(): boolean;
+  isValid(): boolean;
+  isVideoFrame(): boolean;
+  keep(): this;
+  // supportsFrameMetadata
+  writeData(data: ArrayBuffer): this;
+  writeTextureCoordinates(coords: ArrayBuffer): boolean;
+  writeVertices(vertices: ArrayBuffer): boolean;
 }
 
 export interface RSFrameSet {

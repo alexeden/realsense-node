@@ -16,6 +16,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		  "RSFrame",
 		  {
 			InstanceMethod("canGetPoints", &RSFrame::CanGetPoints),
+			InstanceMethod("destroy", &RSFrame::Destroy),
 			InstanceMethod("exportToPly", &RSFrame::ExportToPly),
 			InstanceMethod("getBaseLine", &RSFrame::GetBaseLine),
 			InstanceMethod("getBitsPerPixel", &RSFrame::GetBitsPerPixel),
@@ -47,7 +48,6 @@ class RSFrame : public ObjectWrap<RSFrame> {
 			InstanceMethod("writeData", &RSFrame::WriteData),
 			InstanceMethod("writeTextureCoordinates", &RSFrame::WriteTextureCoordinates),
 			InstanceMethod("writeVertices", &RSFrame::WriteVertices),
-			InstanceMethod("destroy", &RSFrame::Destroy),
 		  });
 
 		constructor = Napi::Persistent(func);
@@ -147,18 +147,18 @@ class RSFrame : public ObjectWrap<RSFrame> {
 
 	Napi::Value Destroy(const CallbackInfo& info) {
 		this->DestroyMe();
-		return info.Env().Undefined();
+		return info.This();
 	}
 
 	Napi::Value ExportToPly(const CallbackInfo& info) {
 		auto texture = ObjectWrap<RSFrame>::Unwrap(info[1].ToObject());
 		auto file	 = std::string(info[0].ToString()).c_str();
-		if (!texture) return info.Env().Undefined();
+		if (!texture) return info.This();
 
 		rs2_frame* ptr = nullptr;
 		std::swap(texture->frame_, ptr);
 		CallNativeFunc(rs2_export_to_ply, &this->error_, this->frame_, file, ptr, &this->error_);
-		return info.Env().Undefined();
+		return info.This();
 	}
 
 	Napi::Value GetBaseLine(const CallbackInfo& info) {
@@ -184,14 +184,14 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		return TypedArrayOf<uint8_t>::New(info.Env(), length, array_buffer, 0);
 	}
 
-    Napi::Value GetDistance(const CallbackInfo& info) {
+	Napi::Value GetDistance(const CallbackInfo& info) {
 		auto x = info[0].ToNumber().Int32Value();
 		auto y = info[1].ToNumber().Int32Value();
 
 		auto val
 		  = GetNativeResult<float>(rs2_depth_frame_get_distance, &this->error_, this->frame_, x, y, &this->error_);
 		return Number::New(info.Env(), val);
-    }
+	}
 
 	Napi::Value GetFrameMetadata(const CallbackInfo& info) {
 		rs2_frame_metadata_value metadata = static_cast<rs2_frame_metadata_value>(info[0].ToNumber().Int32Value());
@@ -222,7 +222,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		return Number::New(info.Env(), value);
 	}
 
-    Napi::Value GetHeight(const CallbackInfo& info) {
+	Napi::Value GetHeight(const CallbackInfo& info) {
 		auto value = GetNativeResult<int>(rs2_get_frame_height, &this->error_, this->frame_, &this->error_);
 		return Number::New(info.Env(), value);
 	}
@@ -235,7 +235,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		return info.Env().Undefined();
 	}
 
-    Napi::Value GetPointsCount(const CallbackInfo& info) {
+	Napi::Value GetPointsCount(const CallbackInfo& info) {
 		int32_t count = GetNativeResult<int>(rs2_get_frame_points_count, &this->error_, this->frame_, &this->error_);
 		return Number::New(info.Env(), count);
 	}
@@ -374,7 +374,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		return Boolean::New(info.Env(), this->frame_ ? true : false);
 	}
 
-    Napi::Value IsVideoFrame(const CallbackInfo& info) {
+	Napi::Value IsVideoFrame(const CallbackInfo& info) {
 		bool isVideo = false;
 		if (GetNativeResult<
 			  bool>(rs2_is_frame_extendable_to, &this->error_, this->frame_, RS2_EXTENSION_VIDEO_FRAME, &this->error_))
@@ -386,7 +386,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		if (!this->frame_) return info.Env().Undefined();
 
 		rs2_keep_frame(this->frame_);
-		return info.Env().Undefined();
+		return info.This();
 	}
 
 	Napi::Value SupportsFrameMetadata(const CallbackInfo& info) {
@@ -397,8 +397,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		return Boolean::New(info.Env(), result ? true : false);
 	}
 
-
-    Napi::Value WriteData(const CallbackInfo& info) {
+	Napi::Value WriteData(const CallbackInfo& info) {
 		auto array_buffer = info[0].As<ArrayBuffer>();
 
 		const auto buffer
@@ -408,7 +407,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		const auto height	= GetNativeResult<int>(rs2_get_frame_height, &this->error_, this->frame_, &this->error_);
 		const size_t length = stride * height;
 		if (buffer && array_buffer.ByteLength() >= length) { memcpy(array_buffer.Data(), buffer, length); }
-		return info.Env().Undefined();
+		return info.This();
 	}
 
 	Napi::Value WriteTextureCoordinates(const CallbackInfo& info) {
