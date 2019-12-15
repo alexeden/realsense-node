@@ -15,6 +15,10 @@ export interface RealSenseAddon {
 
 type DevicesChangedCallback = (removed: RSDeviceList, added: RSDeviceList) => void;
 
+// tslint:disable-next-line: no-empty-interface
+export interface RSConfig {
+
+}
 export interface RSContext {
   createDeviceFromSensor(sensor: RSSensor): RSDevice;
   destroy(): void;
@@ -70,6 +74,21 @@ export interface RSOptionRange {
   step: number;
 }
 
+export interface RSPipeline {
+  create(context: RSContext): this;
+  destroy(): this;
+  getActiveProfile(): RSPipelineProfile;
+  pollForFrames(frameset: RSFrameSet): boolean;
+  start(): RSPipelineProfile;
+  startWithConfig(config: RSConfig): RSPipelineProfile;
+  stop(): this;
+  waitForFrames(frameset: RSFrameSet): boolean;
+}
+
+// tslint:disable-next-line: no-empty-interface
+export interface RSPipelineProfile {
+
+}
 export interface RSRegionOfInterest {
   maxX: number;
   maxY: number;
