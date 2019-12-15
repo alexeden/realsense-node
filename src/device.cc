@@ -107,7 +107,7 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 
 	Napi::Value Destroy(const Napi::CallbackInfo& info) {
 		this->DestroyMe();
-		return info.Env().Undefined();
+		return info.This();
 	}
 
 	Napi::Value SupportsCameraInfo(const Napi::CallbackInfo& info) {

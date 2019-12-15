@@ -66,7 +66,7 @@ class RSDeviceList : public ObjectWrap<RSDeviceList> {
 
 	Napi::Value Destroy(const CallbackInfo& info) {
 		this->DestroyMe();
-		return info.Env().Undefined();
+		return info.This();
 	}
 
     Napi::Value ForEach(const CallbackInfo& info) {

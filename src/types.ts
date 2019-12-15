@@ -13,7 +13,7 @@ export interface RealSenseAddon {
   getTime(): number;
   registerErrorCallback: ErrorCallbackRegistration;
   RSAlign: new () => RSAlign;
-  // RSColorizer: new () => RSColorizer;
+  RSColorizer: new () => RSColorizer;
   RSConfig: new () => RSConfig;
   RSContext: new () => RSContext;
   RSDevice: new () => RSDevice;
@@ -49,6 +49,10 @@ export interface RSAlign {
   waitForFrames(): RSFrameSet;
 }
 
+export interface RSColorizer {
+  destroy(): this;
+}
+
 export interface RSConfig {
   destroy(): this;
   disableAllStreams(): this;
@@ -70,7 +74,7 @@ export interface RSConfig {
 
 export interface RSContext {
   createDeviceFromSensor(sensor: RSSensor): RSDevice;
-  destroy(): void;
+  destroy(): this;
   loadDeviceFile(path: string): RSDevice;
   onDevicesChanged(devicesChangedCallback: DevicesChangedCallback): this;
   queryDevices(): RSDeviceList;
@@ -78,7 +82,7 @@ export interface RSContext {
 }
 
 export interface RSDevice {
-  destroy(): void;
+  destroy(): this;
   getCameraInfo(info: number): string;
   querySensors(): RSSensor[];
   reset(): this;
@@ -88,7 +92,7 @@ export interface RSDevice {
 
 export interface RSDeviceList {
   contains(device: RSDevice): boolean;
-  destroy(): void;
+  destroy(): this;
   forEach(callback: (device: RSDevice, index: number) => void): void;
   getDevice(index: number): RSDevice;
   length(): number;

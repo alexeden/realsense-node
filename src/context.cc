@@ -153,7 +153,7 @@ class RSContext : public ObjectWrap<RSContext> {
 	Napi::Value Destroy(const CallbackInfo& info) {
 		this->DestroyMe();
 		std::cerr << "RSContext::Destroy executed" << std::endl;
-		return info.Env().Undefined();
+		return info.This();
 	}
 
 	Napi::Value LoadDeviceFile(const CallbackInfo& info) {
