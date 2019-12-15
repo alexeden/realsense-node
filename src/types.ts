@@ -1,6 +1,7 @@
 import {
   RSLogSeverity,
   RSNotificationCategory,
+  RSOption,
 } from './constants';
 
 type ErrorCallbackRegistration = <T extends object>(recv: T, fn: keyof T) => void;
@@ -67,25 +68,25 @@ export interface RSSensor {
   destroy(): this;
   getCameraInfo(index: number): string;
   getDepthScale(): number;
-  getOption(option: number): number;
-  getOptionDescription(option: number): string;
-  getOptionRange(option: number): RSOptionRange;
-  getOptionValueDescription(option: number, value: number): string;
+  getOption(option: RSOption): number;
+  getOptionDescription(option: RSOption): string;
+  getOptionRange(option: RSOption): RSOptionRange;
+  getOptionValueDescription(option: RSOption, value: number): string;
   getRegionOfInterest(): RSRegionOfInterest;
   getStreamProfiles(): RSStreamProfile;
   isDepthSensor(): boolean;
-  isOptionReadonly(option: number): boolean;
+  isOptionReadonly(option: RSOption): boolean;
   isROISensor(): boolean;
   openMultipleStream(streams: RSStreamProfile[]): this;
   openStream(stream: RSStreamProfile): this;
   // setNotificationCallback
-  setOption(option: number, value: number): this;
+  setOption(option: RSOption, value: number): this;
   setRegionOfInterest(minx: number, miny: number, maxx: number, maxy: number): this;
   // startWithCallback
   startWithSyncer(syncer: RSSyncer): this;
   stop(): void;
   supportsCameraInfo(camera: number): boolean;
-  supportsOption(option: number): boolean;
+  supportsOption(option: RSOption): boolean;
 }
 
 
