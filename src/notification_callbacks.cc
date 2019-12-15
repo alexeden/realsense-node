@@ -2,6 +2,7 @@
 #define NOTIFICATION_CALLBACKS_H
 
 #include "napi-thread-safe-callback.hpp"
+#include "utils.cc"
 #include <iostream>
 #include <librealsense2/hpp/rs_types.hpp>
 

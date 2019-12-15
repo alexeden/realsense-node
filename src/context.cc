@@ -50,7 +50,7 @@ class RSContext : public ObjectWrap<RSContext> {
 
 		// If ctx_ptr is provided, no need to call create.
 		if (ctx_ptr) {
-			auto unwrapped  = ObjectWrap<RSContext>::Unwrap(instance);
+			auto unwrapped	= ObjectWrap<RSContext>::Unwrap(instance);
 			unwrapped->ctx_ = ctx_ptr;
 		}
 		return scope.Escape(napi_value(instance)).ToObject();
@@ -116,59 +116,6 @@ class RSContext : public ObjectWrap<RSContext> {
 	}
 
   private:
-	void RegisterDevicesChangedCallbackMethod(std::shared_ptr<ThreadSafeCallback> fn);
-
-	void DestroyMe() {
-		if (error_) rs2_free_error(error_);
-		error_ = nullptr;
-		if (ctx_) rs2_delete_context(ctx_);
-		ctx_ = nullptr;
-	}
-
-	Napi::Value Destroy(const CallbackInfo& info) {
-		this->DestroyMe();
-		std::cerr << "RSContext::Destroy executed" << std::endl;
-		return info.Env().Undefined();
-	}
-
-	Napi::Value OnDevicesChanged(const CallbackInfo& info) {
-        auto callback = std::make_shared<ThreadSafeCallback>(info[0].As<Function>());
-        this->RegisterDevicesChangedCallbackMethod(callback);
-
-		return info.This();
-	}
-
-	Napi::Value LoadDeviceFile(const CallbackInfo& info) {
-		auto device_file = std::string(info[0].ToString());
-		auto dev		 = GetNativeResult<
-		  rs2_device*>(rs2_context_add_device, &this->error_, this->ctx_, device_file.c_str(), &this->error_);
-		if (!dev) return info.Env().Undefined();
-
-		return RSDevice::NewInstance(info.Env(), dev, RSDevice::kPlaybackDevice);
-	}
-
-	Napi::Value UnloadDeviceFile(const CallbackInfo& info) {
-		auto device_file = std::string(info[0].ToString());
-		CallNativeFunc(rs2_context_remove_device, &this->error_, this->ctx_, device_file.c_str(), &this->error_);
-		return info.Env().Undefined();
-	}
-
-	Napi::Value CreateDeviceFromSensor(const CallbackInfo& info) {
-		auto sensor = ObjectWrap<RSSensor>::Unwrap(info[0].As<Object>());
-
-		rs2_error* error = nullptr;
-		auto dev		 = GetNativeResult<rs2_device*>(rs2_create_device_from_sensor, &error, sensor->sensor_, &error);
-		if (!dev) return info.Env().Undefined();
-
-		return RSDevice::NewInstance(info.Env(), dev);
-	}
-
-	Napi::Value QueryDevices(const CallbackInfo& info) {
-		auto dev_list = GetNativeResult<rs2_device_list*>(rs2_query_devices, &this->error_, this->ctx_, &this->error_);
-		return RSDeviceList::NewInstance(info.Env(), dev_list);
-	}
-
-  private:
 	static FunctionReference constructor;
 
 	FunctionReference device_changed_callback_;
@@ -183,6 +130,58 @@ class RSContext : public ObjectWrap<RSContext> {
 	friend class DevicesChangedCallback;
 	friend class RSPipeline;
 	friend class RSDeviceHub;
+
+	void RegisterDevicesChangedCallbackMethod(std::shared_ptr<ThreadSafeCallback> fn);
+
+	void DestroyMe() {
+		if (error_) rs2_free_error(error_);
+		error_ = nullptr;
+		if (ctx_) rs2_delete_context(ctx_);
+		ctx_ = nullptr;
+	}
+
+	Napi::Value CreateDeviceFromSensor(const CallbackInfo& info) {
+		auto sensor = ObjectWrap<RSSensor>::Unwrap(info[0].As<Object>());
+
+		rs2_error* error = nullptr;
+		auto dev		 = GetNativeResult<rs2_device*>(rs2_create_device_from_sensor, &error, sensor->sensor_, &error);
+		if (!dev) return info.Env().Undefined();
+
+		return RSDevice::NewInstance(info.Env(), dev);
+	}
+
+	Napi::Value Destroy(const CallbackInfo& info) {
+		this->DestroyMe();
+		std::cerr << "RSContext::Destroy executed" << std::endl;
+		return info.Env().Undefined();
+	}
+
+	Napi::Value LoadDeviceFile(const CallbackInfo& info) {
+		auto device_file = std::string(info[0].ToString());
+		auto dev		 = GetNativeResult<
+		  rs2_device*>(rs2_context_add_device, &this->error_, this->ctx_, device_file.c_str(), &this->error_);
+		if (!dev) return info.Env().Undefined();
+
+		return RSDevice::NewInstance(info.Env(), dev, RSDevice::kPlaybackDevice);
+	}
+
+	Napi::Value OnDevicesChanged(const CallbackInfo& info) {
+		auto callback = std::make_shared<ThreadSafeCallback>(info[0].As<Function>());
+		this->RegisterDevicesChangedCallbackMethod(callback);
+
+		return info.This();
+	}
+
+	Napi::Value QueryDevices(const CallbackInfo& info) {
+		auto dev_list = GetNativeResult<rs2_device_list*>(rs2_query_devices, &this->error_, this->ctx_, &this->error_);
+		return RSDeviceList::NewInstance(info.Env(), dev_list);
+	}
+
+	Napi::Value UnloadDeviceFile(const CallbackInfo& info) {
+		auto device_file = std::string(info[0].ToString());
+		CallNativeFunc(rs2_context_remove_device, &this->error_, this->ctx_, device_file.c_str(), &this->error_);
+		return info.Env().Undefined();
+	}
 };
 
 Napi::FunctionReference RSContext::constructor;
