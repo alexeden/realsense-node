@@ -39,8 +39,24 @@ export interface RSAlign {
 
 // tslint:disable-next-line: no-empty-interface
 export interface RSConfig {
-
+  destroy(): this;
+  disableAllStreams(): this;
+  disableStream(stream: number): this;
+  enableAllStreams(): this;
+  enableDevice(device: number): this;
+  enableDeviceFromFile(file: string): this;
+  enableDeviceFromFileRepeatOption(file: string, repeat: boolean): this;
+  enableRecordToFile(file: string): this;
+  enableStream(
+    stream: number,
+    index: number,
+    width: number,
+    height: number,
+    format: number,
+    framerate: number
+  ): this;
 }
+
 export interface RSContext {
   createDeviceFromSensor(sensor: RSSensor): RSDevice;
   destroy(): void;
