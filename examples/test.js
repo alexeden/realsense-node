@@ -1,4 +1,4 @@
-const { addon, RSOption } = require('../dist');
+const { addon: rs, RSOption } = require('../dist');
 
 process
   .once('SIGHUP', () => {
@@ -6,12 +6,16 @@ process
   })
   .once('SIGUSR2', () => {
     console.log('SIGUSR2!');
-    addon.cleanup();
+    rs.cleanup();
     process.exit(0);
   });
 
+const pipeline = new rs.RSPipeline();
+
+pipeline.start();
+
 console.log('Creating context...');
-const ctx = new addon.RSContext();
+const ctx = new rs.RSContext();
 
 console.log('Querying for devices...');
 const deviceList = ctx.queryDevices()

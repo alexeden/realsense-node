@@ -39,8 +39,6 @@ class RSPipeline : public ObjectWrap<RSPipeline> {
 		return scope.Escape(napi_value(instance)).ToObject();
 	}
 
-	friend class RSConfig;
-
 	RSPipeline(const CallbackInfo& info)
 	  : ObjectWrap<RSPipeline>(info)
 	  , pipeline_(nullptr)
@@ -52,6 +50,8 @@ class RSPipeline : public ObjectWrap<RSPipeline> {
 	}
 
   private:
+  	friend class RSConfig;
+
 	static FunctionReference constructor;
 
 	rs2_pipeline* pipeline_;
