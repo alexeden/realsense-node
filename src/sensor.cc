@@ -3,7 +3,6 @@
 
 #include "dicts.cc"
 #include "frame.cc"
-// #include "main_thread_callback.cc"
 #include "notification_callbacks.cc"
 #include "options.cc"
 #include "syncer.cc"
@@ -122,6 +121,20 @@ class RSSensor
 	}
 
   private:
+  	static FunctionReference constructor;
+	rs2_sensor* sensor_;
+	rs2_error* error_;
+	rs2_stream_profile_list* profile_list_;
+	std::string frame_callback_name_;
+	RSFrame* frame_;
+	RSFrame* video_frame_;
+	RSFrame* depth_frame_;
+	RSFrame* disparity_frame_;
+	RSFrame* motion_frame_;
+	RSFrame* pose_frame_;
+	friend class RSContext;
+	friend class FrameCallbackInfo;
+
     void RegisterNotificationCallbackMethod(std::shared_ptr<ThreadSafeCallback> callback) {
         rs2_set_notifications_callback_cpp(sensor_, new NotificationCallback(callback), &this->error_);
     }
@@ -273,6 +286,7 @@ class RSSensor
 	}
 
 	Napi::Value StartWithCallback(const CallbackInfo& info) {
+        auto callback = std::make_shared<ThreadSafeCallback>(info[0].As<Function>());
 		auto frame			 = ObjectWrap<RSFrame>::Unwrap(info[1].ToObject());
 		auto depth_frame	 = ObjectWrap<RSFrame>::Unwrap(info[2].ToObject());
 		auto video_frame	 = ObjectWrap<RSFrame>::Unwrap(info[3].ToObject());
@@ -286,8 +300,8 @@ class RSSensor
 			this->disparity_frame_	   = disparity_frame;
 			this->motion_frame_		   = motion_frame;
 			this->pose_frame_		   = pose_frame;
-			this->frame_callback_name_ = std::string(info[0].ToString());
-			CallNativeFunc(rs2_start_cpp, &this->error_, this->sensor_, new FrameCallbackForProc(this), &this->error_);
+			// this->frame_callback_name_ = std::string(info[0].ToString());
+			CallNativeFunc(rs2_start_cpp, &this->error_, this->sensor_, new FrameCallbackForProc(callback, this), &this->error_);
 		}
 		return info.Env().Undefined();
 	}
@@ -322,23 +336,6 @@ class RSSensor
 	Napi::Value SupportsOption(const CallbackInfo& info) {
 		return this->SupportsOptionInternal(info);
 	}
-
-  private:
-	static FunctionReference constructor;
-	rs2_sensor* sensor_;
-	rs2_error* error_;
-	rs2_stream_profile_list* profile_list_;
-	std::string frame_callback_name_;
-	RSFrame* frame_;
-	RSFrame* video_frame_;
-	RSFrame* depth_frame_;
-	RSFrame* disparity_frame_;
-	RSFrame* motion_frame_;
-	RSFrame* pose_frame_;
-	friend class RSContext;
-	friend class DevicesChangedCallbackInfo;
-	friend class FrameCallbackInfo;
-	friend class NotificationCallbackInfo;
 };
 
 Napi::FunctionReference RSSensor::constructor;

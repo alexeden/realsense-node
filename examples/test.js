@@ -27,6 +27,10 @@ deviceList.forEach((dev, i) => {
     console.log('getStreamProfiles length: ', sensor.getStreamProfiles().length);
     console.log('supports RSOption.LedPower: ', sensor.supportsOption(RSOption.LedPower));
     console.log('RSOption.LedPower: ', sensor.getOption(RSOption.LedPower));
+
+    sensor.onNotification(notification => {
+      console.log('notification!', notification);
+    });
   });
 });
 

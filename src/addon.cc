@@ -40,7 +40,7 @@ Value RegisterErrorCallback(const CallbackInfo& info) {
 }
 
 Value Cleanup(const CallbackInfo& info) {
-	MainThreadCallback::Destroy();
+	// MainThreadCallback::Destroy();
 	ErrorUtil::ResetError();
 
 	return info.Env().Undefined();

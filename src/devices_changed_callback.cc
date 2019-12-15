@@ -19,9 +19,6 @@ class DevicesChangedCallback : public rs2_devices_changed_callback {
 	}
 
 	virtual void on_devices_changed(rs2_device_list* removed, rs2_device_list* added) {
-		std::cerr << __FILE__ << ":" << __LINE__ << "\tDevicesChangedCallback::on_devices_changed" << this->fn_
-				  << std::endl;
-
 		this->fn_->call([removed, added](Napi::Env env, std::vector<napi_value>& args) {
 			Value rmList;
 
