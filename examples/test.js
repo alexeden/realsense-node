@@ -24,7 +24,7 @@ deviceList.forEach((dev, i) => {
     console.log('isDepthSensor: ', sensor.isDepthSensor());
     console.log('isROISensor: ', sensor.isROISensor());
     console.log('getCameraInfo: ', sensor.getCameraInfo(0));
-    console.log('getStreamProfiles: ', sensor.getStreamProfiles());
+    console.log('getStreamProfiles length: ', sensor.getStreamProfiles().length);
     console.log('supports RSOption.LedPower: ', sensor.supportsOption(RSOption.LedPower));
     console.log('RSOption.LedPower: ', sensor.getOption(RSOption.LedPower));
   });

@@ -77,9 +77,9 @@ export interface RSSensor {
   isDepthSensor(): boolean;
   isOptionReadonly(option: RSOption): boolean;
   isROISensor(): boolean;
+  onNotification(callback: (notification: RSNotification) => void): this;
   openMultipleStream(streams: RSStreamProfile[]): this;
   openStream(stream: RSStreamProfile): this;
-  // setNotificationCallback
   setOption(option: RSOption, value: number): this;
   setRegionOfInterest(minx: number, miny: number, maxx: number, maxy: number): this;
   // startWithCallback

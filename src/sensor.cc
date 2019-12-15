@@ -36,9 +36,9 @@ class RSSensor
 			InstanceMethod("isDepthSensor", &RSSensor::IsDepthSensor),
 			InstanceMethod("isOptionReadonly", &RSSensor::IsOptionReadonly),
 			InstanceMethod("isROISensor", &RSSensor::IsROISensor),
+			InstanceMethod("onNotification", &RSSensor::OnNotification),
 			InstanceMethod("openMultipleStream", &RSSensor::OpenMultipleStream),
 			InstanceMethod("openStream", &RSSensor::OpenStream),
-			InstanceMethod("setNotificationCallback", &RSSensor::SetNotificationCallback),
 			InstanceMethod("setOption", &RSSensor::SetOption),
 			InstanceMethod("setRegionOfInterest", &RSSensor::SetRegionOfInterest),
 			InstanceMethod("startWithCallback", &RSSensor::StartWithCallback),
@@ -122,7 +122,9 @@ class RSSensor
 	}
 
   private:
-	void RegisterNotificationCallbackMethod();
+    void RegisterNotificationCallbackMethod(std::shared_ptr<ThreadSafeCallback> callback) {
+        rs2_set_notifications_callback_cpp(sensor_, new NotificationCallback(callback), &this->error_);
+    }
 
 	void DestroyMe() {
 		if (error_) rs2_free_error(error_);
@@ -227,6 +229,13 @@ class RSSensor
 		return Boolean::New(info.Env(), is_roi);
 	}
 
+    Napi::Value OnNotification(const CallbackInfo& info) {
+        auto callback = std::make_shared<ThreadSafeCallback>(info[0].As<Function>());
+
+		this->RegisterNotificationCallbackMethod(callback);
+		return info.This();
+	}
+
 	Napi::Value OpenMultipleStream(const CallbackInfo& info) {
 		auto array	 = info[0].As<Array>();
 		uint32_t len = array.Length();
@@ -245,12 +254,6 @@ class RSSensor
 
 		CallNativeFunc(rs2_open, &this->error_, this->sensor_, profile->profile_, &this->error_);
 		return info.This();
-	}
-
-	Napi::Value SetNotificationCallback(const CallbackInfo& info) {
-		this->notification_callback_name_ = std::string(info[0].ToString());
-		this->RegisterNotificationCallbackMethod();
-		return info.Env().Undefined();
 	}
 
 	Napi::Value SetOption(const CallbackInfo& info) {
@@ -326,7 +329,6 @@ class RSSensor
 	rs2_error* error_;
 	rs2_stream_profile_list* profile_list_;
 	std::string frame_callback_name_;
-	std::string notification_callback_name_;
 	RSFrame* frame_;
 	RSFrame* video_frame_;
 	RSFrame* depth_frame_;
@@ -340,9 +342,5 @@ class RSSensor
 };
 
 Napi::FunctionReference RSSensor::constructor;
-
-void RSSensor::RegisterNotificationCallbackMethod() {
-	CallNativeFunc(rs2_set_notifications_callback_cpp, &error_, sensor_, new NotificationCallback(this), &error_);
-}
 
 #endif

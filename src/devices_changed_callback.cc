@@ -10,12 +10,12 @@
 using namespace Napi;
 
 class DevicesChangedCallback : public rs2_devices_changed_callback {
-  public:
+  private:
 	std::shared_ptr<ThreadSafeCallback> fn_;
 
+  public:
 	DevicesChangedCallback(std::shared_ptr<ThreadSafeCallback> fn)
 	  : fn_(fn) {
-		std::cerr << __FILE__ << ":" << __LINE__ << "\tDevicesChangedCallback::DevicesChangedCallback" << std::endl;
 	}
 
 	virtual void on_devices_changed(rs2_device_list* removed, rs2_device_list* added) {
