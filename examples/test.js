@@ -7,6 +7,7 @@ process
   .once('SIGUSR2', () => {
     console.log('SIGUSR2!');
     addon.cleanup();
+    process.exit(0);
   });
 
 console.log('Creating context...');
