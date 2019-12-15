@@ -111,5 +111,5 @@ export interface RSStreamProfile {
 export interface RSSyncer {
   destroy(): this;
   pollForFrames(frameset: RSFrameSet): boolean;
-  waitForFrames(frameset: RSFrameSet): boolean;s
+  waitForFrames(frameset: RSFrameSet): boolean;
 }
