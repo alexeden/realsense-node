@@ -42,8 +42,17 @@ export interface RSDeviceList {
 }
 
 // tslint:disable-next-line: no-empty-interface
-export interface RSFrameSet {
+export interface RSFrame {
 
+}
+
+export interface RSFrameSet {
+  destroy(): this;
+  getFrame(stream: number, streamIndex: number): RSFrame;
+  getSize(): number;
+  indexToStream(index: number): number;
+  indexToStreamIndex(index: number): number;
+  replaceFrame(stream: number, streamIndex: number, frame: RSFrame): boolean;
 }
 
 export interface RSNotification {
@@ -99,9 +108,8 @@ export interface RSSensor {
 export interface RSStreamProfile {
 }
 
-// tslint:disable-next-line: no-empty-interface
 export interface RSSyncer {
   destroy(): this;
   pollForFrames(frameset: RSFrameSet): boolean;
-  waitForFrames(frameset: RSFrameSet): boolean;
+  waitForFrames(frameset: RSFrameSet): boolean;s
 }

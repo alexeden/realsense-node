@@ -17,11 +17,11 @@ class RSFrameSet : public ObjectWrap<RSFrameSet> {
 		  "RSFrameSet",
 		  {
 			InstanceMethod("destroy", &RSFrameSet::Destroy),
-			InstanceMethod("getSize", &RSFrameSet::GetSize),
 			InstanceMethod("getFrame", &RSFrameSet::GetFrame),
-			InstanceMethod("replaceFrame", &RSFrameSet::ReplaceFrame),
+			InstanceMethod("getSize", &RSFrameSet::GetSize),
 			InstanceMethod("indexToStream", &RSFrameSet::IndexToStream),
 			InstanceMethod("indexToStreamIndex", &RSFrameSet::IndexToStreamIndex),
+			InstanceMethod("replaceFrame", &RSFrameSet::ReplaceFrame),
 		  });
 		constructor = Napi::Persistent(func);
 		constructor.SuppressDestruct();
@@ -33,7 +33,7 @@ class RSFrameSet : public ObjectWrap<RSFrameSet> {
 	static Object NewInstance(Napi::Env env, rs2_frame* frame) {
 		EscapableHandleScope scope(env);
 		Object instance = constructor.New({});
-		auto unwrapped  = ObjectWrap<RSFrameSet>::Unwrap(instance);
+		auto unwrapped	= ObjectWrap<RSFrameSet>::Unwrap(instance);
 		unwrapped->SetFrame(frame);
 
 		return scope.Escape(napi_value(instance)).ToObject();
@@ -50,7 +50,7 @@ class RSFrameSet : public ObjectWrap<RSFrameSet> {
 
 	RSFrameSet(const CallbackInfo& info)
 	  : ObjectWrap<RSFrameSet>(info) {
-		error_  = nullptr;
+		error_	= nullptr;
 		frames_ = nullptr;
 	}
 
@@ -59,6 +59,12 @@ class RSFrameSet : public ObjectWrap<RSFrameSet> {
 	}
 
   private:
+	static FunctionReference constructor;
+
+	rs2_frame* frames_;
+	uint32_t frame_count_;
+	rs2_error* error_;
+
 	void SetFrame(rs2_frame* frame) {
 		if (
 		  !frame
@@ -80,12 +86,8 @@ class RSFrameSet : public ObjectWrap<RSFrameSet> {
 	Napi::Value Destroy(const CallbackInfo& info) {
 		auto unwrapped = ObjectWrap<RSFrameSet>::Unwrap(info[0].As<Object>());
 		if (unwrapped) { unwrapped->DestroyMe(); }
-		return info.Env().Undefined();
-	}
 
-	Napi::Value GetSize(const CallbackInfo& info) {
-		if (this->frames_) { return Number::New(info.Env(), this->frame_count_); }
-		return Number::New(info.Env(), 0);
+		return info.This();
 	}
 
 	Napi::Value GetFrame(const CallbackInfo& info) {
@@ -121,32 +123,9 @@ class RSFrameSet : public ObjectWrap<RSFrameSet> {
 		return info.Env().Undefined();
 	}
 
-	Napi::Value ReplaceFrame(const CallbackInfo& info) {
-		rs2_stream stream = static_cast<rs2_stream>(info[0].ToNumber().Int32Value());
-		auto stream_index = info[1].ToNumber().Int32Value();
-		auto target_frame = ObjectWrap<RSFrame>::Unwrap(info[2].ToObject());
-
-		if (!this->frames_) return Boolean::New(info.Env(), false);
-
-		for (uint32_t i = 0; i < this->frame_count_; i++) {
-			rs2_frame* frame
-			  = GetNativeResult<rs2_frame*>(rs2_extract_frame, &this->error_, this->frames_, i, &this->error_);
-			if (!frame) continue;
-
-			const rs2_stream_profile* profile = GetNativeResult<
-			  const rs2_stream_profile*>(rs2_get_frame_stream_profile, &this->error_, frame, &this->error_);
-			if (profile) {
-				StreamProfileExtractor extrator(profile);
-				if (
-				  extrator.stream_ == stream && (!stream_index || (stream_index && stream_index == extrator.index_))) {
-					target_frame->Replace(frame);
-					return Boolean::New(info.Env(), true);
-				}
-			}
-			rs2_release_frame(frame);
-		}
-
-		return Boolean::New(info.Env(), false);
+	Napi::Value GetSize(const CallbackInfo& info) {
+		if (this->frames_) { return Number::New(info.Env(), this->frame_count_); }
+		return Number::New(info.Env(), 0);
 	}
 
 	Napi::Value IndexToStream(const CallbackInfo& info) {
@@ -204,11 +183,33 @@ class RSFrameSet : public ObjectWrap<RSFrameSet> {
 		return Number::New(info.Env(), idx);
 	}
 
-  private:
-	static FunctionReference constructor;
-	rs2_frame* frames_;
-	uint32_t frame_count_;
-	rs2_error* error_;
+	Napi::Value ReplaceFrame(const CallbackInfo& info) {
+		rs2_stream stream = static_cast<rs2_stream>(info[0].ToNumber().Int32Value());
+		auto stream_index = info[1].ToNumber().Int32Value();
+		auto target_frame = ObjectWrap<RSFrame>::Unwrap(info[2].ToObject());
+
+		if (!this->frames_) return Boolean::New(info.Env(), false);
+
+		for (uint32_t i = 0; i < this->frame_count_; i++) {
+			rs2_frame* frame
+			  = GetNativeResult<rs2_frame*>(rs2_extract_frame, &this->error_, this->frames_, i, &this->error_);
+			if (!frame) continue;
+
+			const rs2_stream_profile* profile = GetNativeResult<
+			  const rs2_stream_profile*>(rs2_get_frame_stream_profile, &this->error_, frame, &this->error_);
+			if (profile) {
+				StreamProfileExtractor extrator(profile);
+				if (
+				  extrator.stream_ == stream && (!stream_index || (stream_index && stream_index == extrator.index_))) {
+					target_frame->Replace(frame);
+					return Boolean::New(info.Env(), true);
+				}
+			}
+			rs2_release_frame(frame);
+		}
+
+		return Boolean::New(info.Env(), false);
+	}
 };
 
 Napi::FunctionReference RSFrameSet::constructor;
