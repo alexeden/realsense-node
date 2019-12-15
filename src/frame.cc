@@ -14,40 +14,40 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		Napi::Function func = DefineClass(
 		  env,
 		  "RSFrame",
-		  { InstanceMethod("destroy", &RSFrame::Destroy),
-			InstanceMethod("getStreamProfile", &RSFrame::GetStreamProfile),
-			InstanceMethod("getData", &RSFrame::GetData),
-			InstanceMethod("writeData", &RSFrame::WriteData),
-			InstanceMethod("getWidth", &RSFrame::GetWidth),
-			InstanceMethod("getHeight", &RSFrame::GetHeight),
-			InstanceMethod("getStrideInBytes", &RSFrame::GetStrideInBytes),
+		  {
+			InstanceMethod("canGetPoints", &RSFrame::CanGetPoints),
+			InstanceMethod("exportToPly", &RSFrame::ExportToPly),
+			InstanceMethod("getBaseLine", &RSFrame::GetBaseLine),
 			InstanceMethod("getBitsPerPixel", &RSFrame::GetBitsPerPixel),
+			InstanceMethod("getData", &RSFrame::GetData),
+			InstanceMethod("getDistance", &RSFrame::GetDistance),
+			InstanceMethod("getFrameMetadata", &RSFrame::GetFrameMetadata),
+			InstanceMethod("getFrameNumber", &RSFrame::GetFrameNumber),
+			InstanceMethod("getHeight", &RSFrame::GetHeight),
+			InstanceMethod("getMotionData", &RSFrame::GetMotionData),
+			InstanceMethod("getPointsCount", &RSFrame::GetPointsCount),
+			InstanceMethod("getPoseData", &RSFrame::GetPoseData),
+			InstanceMethod("getStreamProfile", &RSFrame::GetStreamProfile),
+			InstanceMethod("getStrideInBytes", &RSFrame::GetStrideInBytes),
+			InstanceMethod("getTexCoordBufferLen", &RSFrame::GetTexCoordBufferLen),
+			InstanceMethod("getTextureCoordinates", &RSFrame::GetTextureCoordinates),
 			InstanceMethod("getTimestamp", &RSFrame::GetTimestamp),
 			InstanceMethod("getTimestampDomain", &RSFrame::GetTimestampDomain),
-			InstanceMethod("getFrameNumber", &RSFrame::GetFrameNumber),
-			InstanceMethod("getFrameMetadata", &RSFrame::GetFrameMetadata),
-			InstanceMethod("supportsFrameMetadata", &RSFrame::SupportsFrameMetadata),
-			InstanceMethod("isVideoFrame", &RSFrame::IsVideoFrame),
+			InstanceMethod("getVertices", &RSFrame::GetVertices),
+			InstanceMethod("getVerticesBufferLen", &RSFrame::GetVerticesBufferLen),
+			InstanceMethod("getWidth", &RSFrame::GetWidth),
 			InstanceMethod("isDepthFrame", &RSFrame::IsDepthFrame),
 			InstanceMethod("isDisparityFrame", &RSFrame::IsDisparityFrame),
 			InstanceMethod("isMotionFrame", &RSFrame::IsMotionFrame),
 			InstanceMethod("isPoseFrame", &RSFrame::IsPoseFrame),
-			InstanceMethod("canGetPoints", &RSFrame::CanGetPoints),
-			InstanceMethod("getVertices", &RSFrame::GetVertices),
-			InstanceMethod("getVerticesBufferLen", &RSFrame::GetVerticesBufferLen),
-			InstanceMethod("getTexCoordBufferLen", &RSFrame::GetTexCoordBufferLen),
-			InstanceMethod("writeVertices", &RSFrame::WriteVertices),
-			InstanceMethod("getTextureCoordinates", &RSFrame::GetTextureCoordinates),
-			InstanceMethod("writeTextureCoordinates", &RSFrame::WriteTextureCoordinates),
-			InstanceMethod("getPointsCount", &RSFrame::GetPointsCount),
-			InstanceMethod("exportToPly", &RSFrame::ExportToPly),
 			InstanceMethod("isValid", &RSFrame::IsValid),
-			InstanceMethod("getDistance", &RSFrame::GetDistance),
-			InstanceMethod("getBaseLine", &RSFrame::GetBaseLine),
+			InstanceMethod("isVideoFrame", &RSFrame::IsVideoFrame),
 			InstanceMethod("keep", &RSFrame::Keep),
-			InstanceMethod("getMotionData", &RSFrame::GetMotionData),
-			InstanceMethod("getPoseData", &RSFrame::GetPoseData)
-
+			InstanceMethod("supportsFrameMetadata", &RSFrame::SupportsFrameMetadata),
+			InstanceMethod("writeData", &RSFrame::WriteData),
+			InstanceMethod("writeTextureCoordinates", &RSFrame::WriteTextureCoordinates),
+			InstanceMethod("writeVertices", &RSFrame::WriteVertices),
+			InstanceMethod("destroy", &RSFrame::Destroy),
 		  });
 
 		constructor = Napi::Persistent(func);
@@ -137,6 +137,118 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		obj.Set(mapper_confidence_name, Number::New(env, pose.mapper_confidence));
 	}
 
+	Napi::Value CanGetPoints(const CallbackInfo& info) {
+		bool result = false;
+		if (GetNativeResult<
+			  int>(rs2_is_frame_extendable_to, &this->error_, this->frame_, RS2_EXTENSION_POINTS, &this->error_))
+			result = true;
+		return Boolean::New(info.Env(), result);
+	}
+
+	Napi::Value Destroy(const CallbackInfo& info) {
+		this->DestroyMe();
+		return info.Env().Undefined();
+	}
+
+	Napi::Value ExportToPly(const CallbackInfo& info) {
+		auto texture = ObjectWrap<RSFrame>::Unwrap(info[1].ToObject());
+		auto file	 = std::string(info[0].ToString()).c_str();
+		if (!texture) return info.Env().Undefined();
+
+		rs2_frame* ptr = nullptr;
+		std::swap(texture->frame_, ptr);
+		CallNativeFunc(rs2_export_to_ply, &this->error_, this->frame_, file, ptr, &this->error_);
+		return info.Env().Undefined();
+	}
+
+	Napi::Value GetBaseLine(const CallbackInfo& info) {
+		auto val
+		  = GetNativeResult<float>(rs2_depth_stereo_frame_get_baseline, &this->error_, this->frame_, &this->error_);
+		return Number::New(info.Env(), val);
+	}
+
+	Napi::Value GetBitsPerPixel(const CallbackInfo& info) {
+		auto value = GetNativeResult<int>(rs2_get_frame_bits_per_pixel, &this->error_, this->frame_, &this->error_);
+		return Number::New(info.Env(), value);
+	}
+
+	Napi::Value GetData(const CallbackInfo& info) {
+		auto buffer = GetNativeResult<const void*>(rs2_get_frame_data, &this->error_, this->frame_, &this->error_);
+		if (!buffer) return info.Env().Undefined();
+
+		const auto stride
+		  = GetNativeResult<int>(rs2_get_frame_stride_in_bytes, &this->error_, this->frame_, &this->error_);
+		const auto height = GetNativeResult<int>(rs2_get_frame_height, &this->error_, this->frame_, &this->error_);
+		const auto length = stride * height;
+		auto array_buffer = ArrayBuffer::New(info.Env(), static_cast<uint8_t*>(const_cast<void*>(buffer)), length);
+		return TypedArrayOf<uint8_t>::New(info.Env(), length, array_buffer, 0);
+	}
+
+    Napi::Value GetDistance(const CallbackInfo& info) {
+		auto x = info[0].ToNumber().Int32Value();
+		auto y = info[1].ToNumber().Int32Value();
+
+		auto val
+		  = GetNativeResult<float>(rs2_depth_frame_get_distance, &this->error_, this->frame_, x, y, &this->error_);
+		return Number::New(info.Env(), val);
+    }
+
+	Napi::Value GetFrameMetadata(const CallbackInfo& info) {
+		rs2_frame_metadata_value metadata = static_cast<rs2_frame_metadata_value>(info[0].ToNumber().Int32Value());
+		TypedArrayOf<unsigned char> content(info.Env(), info[1]);
+		auto data = content.Data();
+		if (!data) return Boolean::New(info.Env(), false);
+
+		rs2_metadata_type output = GetNativeResult<
+		  rs2_metadata_type>(rs2_get_frame_metadata, &this->error_, this->frame_, metadata, &this->error_);
+		unsigned char* out_ptr = reinterpret_cast<unsigned char*>(&output);
+		uint32_t val		   = 1;
+		unsigned char* val_ptr = reinterpret_cast<unsigned char*>(&val);
+
+		if (*val_ptr == 0) {
+			// big endian
+			memcpy(data, out_ptr, 8);
+		}
+		else {
+			// little endian
+			for (int32_t i = 0; i < 8; i++) { data[i] = out_ptr[7 - i]; }
+		}
+
+		return Boolean::New(info.Env(), true);
+	}
+
+	Napi::Value GetFrameNumber(const CallbackInfo& info) {
+		uint32_t value = GetNativeResult<uint32_t>(rs2_get_frame_number, &this->error_, this->frame_, &this->error_);
+		return Number::New(info.Env(), value);
+	}
+
+    Napi::Value GetHeight(const CallbackInfo& info) {
+		auto value = GetNativeResult<int>(rs2_get_frame_height, &this->error_, this->frame_, &this->error_);
+		return Number::New(info.Env(), value);
+	}
+
+	Napi::Value GetMotionData(const CallbackInfo& info) {
+		auto obj		= info[0].ToObject();
+		auto frame_data = static_cast<const float*>(
+		  GetNativeResult<const void*>(rs2_get_frame_data, &this->error_, this->frame_, &this->error_));
+		for (uint32_t i = 0; i < 3; i++) { SetAFloatInVectorObject(info.Env(), obj, i, frame_data[i]); }
+		return info.Env().Undefined();
+	}
+
+    Napi::Value GetPointsCount(const CallbackInfo& info) {
+		int32_t count = GetNativeResult<int>(rs2_get_frame_points_count, &this->error_, this->frame_, &this->error_);
+		return Number::New(info.Env(), count);
+	}
+
+	Napi::Value GetPoseData(const CallbackInfo& info) {
+		rs2_pose pose_data;
+		CallNativeFunc(rs2_pose_frame_get_pose_data, &this->error_, this->frame_, &pose_data, &this->error_);
+		if (this->error_) return Boolean::New(info.Env(), false);
+
+		AssemblePoseData(info.Env(), info[0].ToObject(), pose_data);
+		return Boolean::New(info.Env(), true);
+	}
+
 	Napi::Value GetStreamProfile(const CallbackInfo& info) {
 		rs2_stream stream;
 		rs2_format format;
@@ -164,49 +276,33 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		return RSStreamProfile::NewInstance(info.Env(), profile, true);
 	}
 
-	Napi::Value GetData(const CallbackInfo& info) {
-		auto buffer = GetNativeResult<const void*>(rs2_get_frame_data, &this->error_, this->frame_, &this->error_);
-		if (!buffer) return info.Env().Undefined();
-
-		const auto stride
-		  = GetNativeResult<int>(rs2_get_frame_stride_in_bytes, &this->error_, this->frame_, &this->error_);
-		const auto height = GetNativeResult<int>(rs2_get_frame_height, &this->error_, this->frame_, &this->error_);
-		const auto length = stride * height;
-		auto array_buffer = ArrayBuffer::New(info.Env(), static_cast<uint8_t*>(const_cast<void*>(buffer)), length);
-		return TypedArrayOf<uint8_t>::New(info.Env(), length, array_buffer, 0);
-	}
-
-	Napi::Value WriteData(const CallbackInfo& info) {
-		auto array_buffer = info[0].As<ArrayBuffer>();
-
-		const auto buffer
-		  = GetNativeResult<const void*>(rs2_get_frame_data, &this->error_, this->frame_, &this->error_);
-		const auto stride
-		  = GetNativeResult<int>(rs2_get_frame_stride_in_bytes, &this->error_, this->frame_, &this->error_);
-		const auto height	= GetNativeResult<int>(rs2_get_frame_height, &this->error_, this->frame_, &this->error_);
-		const size_t length = stride * height;
-		if (buffer && array_buffer.ByteLength() >= length) { memcpy(array_buffer.Data(), buffer, length); }
-		return info.Env().Undefined();
-	}
-
-	Napi::Value GetWidth(const CallbackInfo& info) {
-		auto value = GetNativeResult<int>(rs2_get_frame_width, &this->error_, this->frame_, &this->error_);
-		return Number::New(info.Env(), value);
-	}
-
-	Napi::Value GetHeight(const CallbackInfo& info) {
-		auto value = GetNativeResult<int>(rs2_get_frame_height, &this->error_, this->frame_, &this->error_);
-		return Number::New(info.Env(), value);
-	}
-
 	Napi::Value GetStrideInBytes(const CallbackInfo& info) {
 		auto value = GetNativeResult<int>(rs2_get_frame_stride_in_bytes, &this->error_, this->frame_, &this->error_);
 		return Number::New(info.Env(), value);
 	}
 
-	Napi::Value GetBitsPerPixel(const CallbackInfo& info) {
-		auto value = GetNativeResult<int>(rs2_get_frame_bits_per_pixel, &this->error_, this->frame_, &this->error_);
-		return Number::New(info.Env(), value);
+	Napi::Value GetTexCoordBufferLen(const CallbackInfo& info) {
+		const size_t count
+		  = GetNativeResult<size_t>(rs2_get_frame_points_count, &this->error_, this->frame_, &this->error_);
+		const uint32_t step	  = 2 * sizeof(int);
+		const uint32_t length = count * step;
+		return Number::New(info.Env(), length);
+	}
+
+	Napi::Value GetTextureCoordinates(const CallbackInfo& info) {
+		rs2_pixel* coords
+		  = GetNativeResult<rs2_pixel*>(rs2_get_frame_texture_coordinates, &this->error_, this->frame_, &this->error_);
+		size_t count = GetNativeResult<size_t>(rs2_get_frame_points_count, &this->error_, this->frame_, &this->error_);
+		if (!coords || !count) return info.Env().Undefined();
+
+		uint32_t step	  = 2 * sizeof(int);
+		uint32_t len	  = count * step;
+		auto texcoord_buf = static_cast<uint8_t*>(malloc(len));
+
+		for (size_t i = 0; i < count; ++i) { memcpy(texcoord_buf + i * step, coords[i].ij, step); }
+		auto array_buffer = ArrayBuffer::New(info.Env(), texcoord_buf, len);
+
+		return TypedArrayOf<float>::New(info.Env(), 2 * count, array_buffer, 0);
 	}
 
 	Napi::Value GetTimestamp(const CallbackInfo& info) {
@@ -220,17 +316,32 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		return Number::New(info.Env(), value);
 	}
 
-	Napi::Value GetFrameNumber(const CallbackInfo& info) {
-		uint32_t value = GetNativeResult<uint32_t>(rs2_get_frame_number, &this->error_, this->frame_, &this->error_);
-		return Number::New(info.Env(), value);
+	Napi::Value GetVertices(const CallbackInfo& info) {
+		rs2_vertex* vertices
+		  = GetNativeResult<rs2_vertex*>(rs2_get_frame_vertices, &this->error_, this->frame_, &this->error_);
+		size_t count = GetNativeResult<size_t>(rs2_get_frame_points_count, &this->error_, this->frame_, &this->error_);
+		if (!vertices || !count) return info.Env().Undefined();
+
+		uint32_t step	= 3 * sizeof(float);
+		uint32_t len	= count * step;
+		auto vertex_buf = static_cast<uint8_t*>(malloc(len));
+
+		for (size_t i = 0; i < count; i++) { memcpy(vertex_buf + i * step, vertices[i].xyz, step); }
+		auto array_buffer = ArrayBuffer::New(info.Env(), vertex_buf, len);
+		return TypedArrayOf<float>::New(info.Env(), 3 * count, array_buffer, 0);
 	}
 
-	Napi::Value IsVideoFrame(const CallbackInfo& info) {
-		bool isVideo = false;
-		if (GetNativeResult<
-			  bool>(rs2_is_frame_extendable_to, &this->error_, this->frame_, RS2_EXTENSION_VIDEO_FRAME, &this->error_))
-			isVideo = true;
-		return Boolean::New(info.Env(), isVideo);
+	Napi::Value GetVerticesBufferLen(const CallbackInfo& info) {
+		const size_t count
+		  = GetNativeResult<size_t>(rs2_get_frame_points_count, &this->error_, this->frame_, &this->error_);
+		const uint32_t step	  = 3 * sizeof(float);
+		const uint32_t length = count * step;
+		return Number::New(info.Env(), length);
+	}
+
+	Napi::Value GetWidth(const CallbackInfo& info) {
+		auto value = GetNativeResult<int>(rs2_get_frame_width, &this->error_, this->frame_, &this->error_);
+		return Number::New(info.Env(), value);
 	}
 
 	Napi::Value IsDepthFrame(const CallbackInfo& info) {
@@ -259,28 +370,23 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		return Boolean::New(info.Env(), val ? true : false);
 	}
 
-	Napi::Value GetFrameMetadata(const CallbackInfo& info) {
-		rs2_frame_metadata_value metadata = static_cast<rs2_frame_metadata_value>(info[0].ToNumber().Int32Value());
-		TypedArrayOf<unsigned char> content(info.Env(), info[1]);
-		auto data = content.Data();
-		if (!data) return Boolean::New(info.Env(), false);
+	Napi::Value IsValid(const CallbackInfo& info) {
+		return Boolean::New(info.Env(), this->frame_ ? true : false);
+	}
 
-		rs2_metadata_type output = GetNativeResult<
-		  rs2_metadata_type>(rs2_get_frame_metadata, &this->error_, this->frame_, metadata, &this->error_);
-		unsigned char* out_ptr = reinterpret_cast<unsigned char*>(&output);
-		uint32_t val		   = 1;
-		unsigned char* val_ptr = reinterpret_cast<unsigned char*>(&val);
+    Napi::Value IsVideoFrame(const CallbackInfo& info) {
+		bool isVideo = false;
+		if (GetNativeResult<
+			  bool>(rs2_is_frame_extendable_to, &this->error_, this->frame_, RS2_EXTENSION_VIDEO_FRAME, &this->error_))
+			isVideo = true;
+		return Boolean::New(info.Env(), isVideo);
+	}
 
-		if (*val_ptr == 0) {
-			// big endian
-			memcpy(data, out_ptr, 8);
-		}
-		else {
-			// little endian
-			for (int32_t i = 0; i < 8; i++) { data[i] = out_ptr[7 - i]; }
-		}
+	Napi::Value Keep(const CallbackInfo& info) {
+		if (!this->frame_) return info.Env().Undefined();
 
-		return Boolean::New(info.Env(), true);
+		rs2_keep_frame(this->frame_);
+		return info.Env().Undefined();
 	}
 
 	Napi::Value SupportsFrameMetadata(const CallbackInfo& info) {
@@ -291,82 +397,18 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		return Boolean::New(info.Env(), result ? true : false);
 	}
 
-	Napi::Value Destroy(const CallbackInfo& info) {
-		this->DestroyMe();
-		return info.Env().Undefined();
-	}
 
-	Napi::Value CanGetPoints(const CallbackInfo& info) {
-		bool result = false;
-		if (GetNativeResult<
-			  int>(rs2_is_frame_extendable_to, &this->error_, this->frame_, RS2_EXTENSION_POINTS, &this->error_))
-			result = true;
-		return Boolean::New(info.Env(), result);
-	}
-
-	Napi::Value GetVertices(const CallbackInfo& info) {
-		rs2_vertex* vertices
-		  = GetNativeResult<rs2_vertex*>(rs2_get_frame_vertices, &this->error_, this->frame_, &this->error_);
-		size_t count = GetNativeResult<size_t>(rs2_get_frame_points_count, &this->error_, this->frame_, &this->error_);
-		if (!vertices || !count) return info.Env().Undefined();
-
-		uint32_t step	= 3 * sizeof(float);
-		uint32_t len	= count * step;
-		auto vertex_buf = static_cast<uint8_t*>(malloc(len));
-
-		for (size_t i = 0; i < count; i++) { memcpy(vertex_buf + i * step, vertices[i].xyz, step); }
-		auto array_buffer = ArrayBuffer::New(info.Env(), vertex_buf, len);
-		return TypedArrayOf<float>::New(info.Env(), 3 * count, array_buffer, 0);
-	}
-
-	Napi::Value GetVerticesBufferLen(const CallbackInfo& info) {
-		const size_t count
-		  = GetNativeResult<size_t>(rs2_get_frame_points_count, &this->error_, this->frame_, &this->error_);
-		const uint32_t step	  = 3 * sizeof(float);
-		const uint32_t length = count * step;
-		return Number::New(info.Env(), length);
-	}
-
-	Napi::Value GetTexCoordBufferLen(const CallbackInfo& info) {
-		const size_t count
-		  = GetNativeResult<size_t>(rs2_get_frame_points_count, &this->error_, this->frame_, &this->error_);
-		const uint32_t step	  = 2 * sizeof(int);
-		const uint32_t length = count * step;
-		return Number::New(info.Env(), length);
-	}
-
-	Napi::Value WriteVertices(const CallbackInfo& info) {
+    Napi::Value WriteData(const CallbackInfo& info) {
 		auto array_buffer = info[0].As<ArrayBuffer>();
 
-		const rs2_vertex* vertBuf
-		  = GetNativeResult<rs2_vertex*>(rs2_get_frame_vertices, &this->error_, this->frame_, &this->error_);
-		const size_t count
-		  = GetNativeResult<size_t>(rs2_get_frame_points_count, &this->error_, this->frame_, &this->error_);
-		if (!vertBuf || !count) return Boolean::New(info.Env(), false);
-
-		const uint32_t step	  = 3 * sizeof(float);
-		const uint32_t length = count * step;
-		if (array_buffer.ByteLength() < length) return Boolean::New(info.Env(), false);
-
-		uint8_t* vertex_buf = static_cast<uint8_t*>(array_buffer.Data());
-		for (size_t i = 0; i < count; i++) { memcpy(vertex_buf + i * step, vertBuf[i].xyz, step); }
-		return Boolean::New(info.Env(), true);
-	}
-
-	Napi::Value GetTextureCoordinates(const CallbackInfo& info) {
-		rs2_pixel* coords
-		  = GetNativeResult<rs2_pixel*>(rs2_get_frame_texture_coordinates, &this->error_, this->frame_, &this->error_);
-		size_t count = GetNativeResult<size_t>(rs2_get_frame_points_count, &this->error_, this->frame_, &this->error_);
-		if (!coords || !count) return info.Env().Undefined();
-
-		uint32_t step	  = 2 * sizeof(int);
-		uint32_t len	  = count * step;
-		auto texcoord_buf = static_cast<uint8_t*>(malloc(len));
-
-		for (size_t i = 0; i < count; ++i) { memcpy(texcoord_buf + i * step, coords[i].ij, step); }
-		auto array_buffer = ArrayBuffer::New(info.Env(), texcoord_buf, len);
-
-		return TypedArrayOf<float>::New(info.Env(), 2 * count, array_buffer, 0);
+		const auto buffer
+		  = GetNativeResult<const void*>(rs2_get_frame_data, &this->error_, this->frame_, &this->error_);
+		const auto stride
+		  = GetNativeResult<int>(rs2_get_frame_stride_in_bytes, &this->error_, this->frame_, &this->error_);
+		const auto height	= GetNativeResult<int>(rs2_get_frame_height, &this->error_, this->frame_, &this->error_);
+		const size_t length = stride * height;
+		if (buffer && array_buffer.ByteLength() >= length) { memcpy(array_buffer.Data(), buffer, length); }
+		return info.Env().Undefined();
 	}
 
 	Napi::Value WriteTextureCoordinates(const CallbackInfo& info) {
@@ -386,62 +428,21 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		return Boolean::New(info.Env(), true);
 	}
 
-	Napi::Value GetPointsCount(const CallbackInfo& info) {
-		int32_t count = GetNativeResult<int>(rs2_get_frame_points_count, &this->error_, this->frame_, &this->error_);
-		return Number::New(info.Env(), count);
-	}
+	Napi::Value WriteVertices(const CallbackInfo& info) {
+		auto array_buffer = info[0].As<ArrayBuffer>();
 
-	Napi::Value ExportToPly(const CallbackInfo& info) {
-		auto texture = ObjectWrap<RSFrame>::Unwrap(info[1].ToObject());
-		auto file	 = std::string(info[0].ToString()).c_str();
-		if (!texture) return info.Env().Undefined();
+		const rs2_vertex* vertBuf
+		  = GetNativeResult<rs2_vertex*>(rs2_get_frame_vertices, &this->error_, this->frame_, &this->error_);
+		const size_t count
+		  = GetNativeResult<size_t>(rs2_get_frame_points_count, &this->error_, this->frame_, &this->error_);
+		if (!vertBuf || !count) return Boolean::New(info.Env(), false);
 
-		rs2_frame* ptr = nullptr;
-		std::swap(texture->frame_, ptr);
-		CallNativeFunc(rs2_export_to_ply, &this->error_, this->frame_, file, ptr, &this->error_);
-		return info.Env().Undefined();
-	}
+		const uint32_t step	  = 3 * sizeof(float);
+		const uint32_t length = count * step;
+		if (array_buffer.ByteLength() < length) return Boolean::New(info.Env(), false);
 
-	Napi::Value IsValid(const CallbackInfo& info) {
-		return Boolean::New(info.Env(), this->frame_ ? true : false);
-	}
-
-	Napi::Value GetDistance(const CallbackInfo& info) {
-		auto x = info[0].ToNumber().Int32Value();
-		auto y = info[1].ToNumber().Int32Value();
-
-		auto val
-		  = GetNativeResult<float>(rs2_depth_frame_get_distance, &this->error_, this->frame_, x, y, &this->error_);
-		return Number::New(info.Env(), val);
-	}
-
-	Napi::Value GetBaseLine(const CallbackInfo& info) {
-		auto val
-		  = GetNativeResult<float>(rs2_depth_stereo_frame_get_baseline, &this->error_, this->frame_, &this->error_);
-		return Number::New(info.Env(), val);
-	}
-
-	Napi::Value Keep(const CallbackInfo& info) {
-		if (!this->frame_) return info.Env().Undefined();
-
-		rs2_keep_frame(this->frame_);
-		return info.Env().Undefined();
-	}
-
-	Napi::Value GetMotionData(const CallbackInfo& info) {
-		auto obj		= info[0].ToObject();
-		auto frame_data = static_cast<const float*>(
-		  GetNativeResult<const void*>(rs2_get_frame_data, &this->error_, this->frame_, &this->error_));
-		for (uint32_t i = 0; i < 3; i++) { SetAFloatInVectorObject(info.Env(), obj, i, frame_data[i]); }
-		return info.Env().Undefined();
-	}
-
-	Napi::Value GetPoseData(const CallbackInfo& info) {
-		rs2_pose pose_data;
-		CallNativeFunc(rs2_pose_frame_get_pose_data, &this->error_, this->frame_, &pose_data, &this->error_);
-		if (this->error_) return Boolean::New(info.Env(), false);
-
-		AssemblePoseData(info.Env(), info[0].ToObject(), pose_data);
+		uint8_t* vertex_buf = static_cast<uint8_t*>(array_buffer.Data());
+		for (size_t i = 0; i < count; i++) { memcpy(vertex_buf + i * step, vertBuf[i].xyz, step); }
 		return Boolean::New(info.Env(), true);
 	}
 
