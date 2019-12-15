@@ -149,22 +149,21 @@ export interface RSSensor {
 }
 
 
-// tslint:disable-next-line: no-empty-interface
 export interface RSStreamProfile {
-destroy(): this;
-// format
-// fps
-// getExtrinsicsTo
-// getMotionIntrinsics
-// getVideoStreamIntrinsics
-// height
-// index
-// isDefault
-// isMotionProfile
-// isVideoProfile
-// stream
-// uniqueID
-// width
+  destroy(): this;
+  format(): RSFormat;
+  fps(): number;
+  getExtrinsicsTo(profile: RSStreamProfile): RSExtrinsics;
+  getMotionIntrinsics(): RSMotionIntrinsics;
+  getVideoStreamIntrinsics(): RSIntrinsics;
+  height(): number;
+  index(): number;
+  isDefault(): number;
+  isMotionProfile(): boolean;
+  isVideoProfile(): boolean;
+  stream(): RSStream;
+  uniqueId(): number;
+  width(): number;
 }
 
 export interface RSSyncer {
