@@ -56,7 +56,7 @@ class RSNotification : public DictBase {
 	  rs2_notification_category category,
 	  const std::string& serialized_data)
 	  : DictBase(env) {
-		SetMember("descr", des);
+		SetMember("description", des);
 		SetMemberT("timestamp", time);
 		SetMemberT("severity", (int32_t) severity);
 		SetMemberT("category", (int32_t) category);

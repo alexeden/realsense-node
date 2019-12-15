@@ -1,3 +1,8 @@
+import {
+  RSLogSeverity,
+  RSNotificationCategory,
+} from './constants';
+
 type ErrorCallbackRegistration = <T extends object>(recv: T, fn: keyof T) => void;
 
 export interface RealSenseAddon {
@@ -16,6 +21,31 @@ export interface RSContext {
   onDevicesChanged(devicesChangedCallback: DevicesChangedCallback): this;
   queryDevices(): RSDeviceList;
   unloadDeviceFile(path: string): void;
+}
+
+export interface RSDevice {
+  destroy(): void;
+  getCameraInfo(info: number): string;
+  querySensors(): RSSensor[];
+  reset(): this;
+  supportsCameraInfo(info: number): boolean;
+  triggerErrorForTest(): void;
+}
+
+export interface RSDeviceList {
+  contains(device: RSDevice): boolean;
+  destroy(): void;
+  forEach(callback: (device: RSDevice, index: number) => void): void;
+  getDevice(index: number): RSDevice;
+  length(): number;
+}
+
+export interface RSNotification {
+  category: RSNotificationCategory;
+  description: string;
+  serializedData: string;
+  severity: RSLogSeverity;
+  timestamp: number;
 }
 
 export interface RSOptionRange {
@@ -66,21 +96,4 @@ export interface RSStreamProfile {
 // tslint:disable-next-line: no-empty-interface
 export interface RSSyncer {
 
-}
-// tslint:disable-next-line: no-empty-interface
-export interface RSDevice {
-  destroy(): void;
-  getCameraInfo(info: number): string;
-  querySensors(): RSSensor[];
-  reset(): this;
-  supportsCameraInfo(info: number): boolean;
-  triggerErrorForTest(): void;
-}
-
-export interface RSDeviceList {
-  contains(device: RSDevice): boolean;
-  destroy(): void;
-  forEach(callback: (device: RSDevice, index: number) => void): void;
-  getDevice(index: number): RSDevice;
-  length(): number;
 }

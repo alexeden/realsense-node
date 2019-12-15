@@ -2,7 +2,7 @@
 #define STREAM_PROFILE_H
 
 #include "dicts.cc"
-#include "stream_profile.cc"
+// #include "stream_profile.cc"
 #include "utils.cc"
 #include <iostream>
 #include <librealsense2/h/rs_internal.h>
