@@ -16,8 +16,8 @@ class RSAlign : public ObjectWrap<RSAlign> {
 		  "RSAlign",
 		  {
 			InstanceMethod("destroy", &RSAlign::Destroy),
-			InstanceMethod("waitForFrames", &RSAlign::WaitForFrames),
 			InstanceMethod("process", &RSAlign::Process),
+			InstanceMethod("waitForFrames", &RSAlign::WaitForFrames),
 		  });
 
 		constructor = Napi::Persistent(func);
@@ -32,8 +32,8 @@ class RSAlign : public ObjectWrap<RSAlign> {
 	  , align_(nullptr)
 	  , frame_queue_(nullptr)
 	  , error_(nullptr) {
-		auto stream  = static_cast<rs2_stream>(info[0].ToNumber().Int32Value());
-		this->align_  = GetNativeResult<rs2_processing_block*>(rs2_create_align, &this->error_, stream, &this->error_);
+		auto stream	 = static_cast<rs2_stream>(info[0].ToNumber().Int32Value());
+		this->align_ = GetNativeResult<rs2_processing_block*>(rs2_create_align, &this->error_, stream, &this->error_);
 
 		this->frame_queue_ = GetNativeResult<rs2_frame_queue*>(rs2_create_frame_queue, &this->error_, 1, &this->error_);
 		if (!this->frame_queue_) return;
@@ -47,6 +47,14 @@ class RSAlign : public ObjectWrap<RSAlign> {
 	}
 
   private:
+	friend class RSPipeline;
+
+	static FunctionReference constructor;
+
+	rs2_processing_block* align_;
+	rs2_frame_queue* frame_queue_;
+	rs2_error* error_;
+
 	void DestroyMe() {
 		if (error_) rs2_free_error(error_);
 		error_ = nullptr;
@@ -58,16 +66,7 @@ class RSAlign : public ObjectWrap<RSAlign> {
 
 	Napi::Value Destroy(const CallbackInfo& info) {
 		this->DestroyMe();
-
-		return info.Env().Undefined();
-	}
-
-	Napi::Value WaitForFrames(const CallbackInfo& info) {
-		rs2_frame* result
-		  = GetNativeResult<rs2_frame*>(rs2_wait_for_frame, &this->error_, this->frame_queue_, 5000, &this->error_);
-		if (!result) return info.Env().Undefined();
-
-		return RSFrameSet::NewInstance(info.Env(), result);
+		return info.This();
 	}
 
 	Napi::Value Process(const CallbackInfo& info) {
@@ -91,13 +90,13 @@ class RSAlign : public ObjectWrap<RSAlign> {
 		return Boolean::New(info.Env(), true);
 	}
 
-  private:
-	static FunctionReference constructor;
+	Napi::Value WaitForFrames(const CallbackInfo& info) {
+		rs2_frame* result
+		  = GetNativeResult<rs2_frame*>(rs2_wait_for_frame, &this->error_, this->frame_queue_, 5000, &this->error_);
+		if (!result) return info.Env().Undefined();
 
-	rs2_processing_block* align_;
-	rs2_frame_queue* frame_queue_;
-	rs2_error* error_;
-	friend class RSPipeline;
+		return RSFrameSet::NewInstance(info.Env(), result);
+	}
 };
 
 Napi::FunctionReference RSAlign::constructor;

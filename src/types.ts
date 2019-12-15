@@ -31,6 +31,12 @@ export interface XYZW {
   z: number;
 }
 
+export interface RSAlign {
+  destroy(): this;
+  process(frameset1: RSFrameSet, frameset2: RSFrameSet): boolean;
+  waitForFrames(): RSFrameSet;
+}
+
 // tslint:disable-next-line: no-empty-interface
 export interface RSConfig {
 

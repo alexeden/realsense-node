@@ -52,23 +52,23 @@ Object Init(Env env, Object exports) {
 	exports.Set("getTime", Function::New(env, GetTime));
 	exports.Set("registerErrorCallback", Function::New(env, RegisterErrorCallback));
 
-	RSContext::Init(env, exports);
-	// RSPointCloud::Init(env, exports);
-	RSPipelineProfile::Init(env, exports);
-	RSConfig::Init(env, exports);
-	RSPipeline::Init(env, exports);
-	RSFrameSet::Init(env, exports);
-	RSSensor::Init(env, exports);
-	RSDevice::Init(env, exports);
-	RSDeviceList::Init(env, exports);
-	RSDeviceHub::Init(env, exports);
-	RSStreamProfile::Init(env, exports);
-	RSColorizer::Init(env, exports);
-	// RSFrameQueue::Init(env, exports);
-	RSFrame::Init(env, exports);
-	RSSyncer::Init(env, exports);
-	RSAlign::Init(env, exports);
 	// RSFilter::Init(env, exports);
+	// RSFrameQueue::Init(env, exports);
+	// RSPointCloud::Init(env, exports);
+	RSAlign::Init(env, exports);
+	RSColorizer::Init(env, exports);
+	RSConfig::Init(env, exports);
+	RSContext::Init(env, exports);
+	RSDevice::Init(env, exports);
+	RSDeviceHub::Init(env, exports);
+	RSDeviceList::Init(env, exports);
+	RSFrame::Init(env, exports);
+	RSFrameSet::Init(env, exports);
+	RSPipeline::Init(env, exports);
+	RSPipelineProfile::Init(env, exports);
+	RSSensor::Init(env, exports);
+	RSStreamProfile::Init(env, exports);
+	RSSyncer::Init(env, exports);
 
 	return exports;
 }
