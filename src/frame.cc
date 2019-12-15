@@ -59,8 +59,8 @@ class RSFrame : public ObjectWrap<RSFrame> {
 
 	static Object NewInstance(Napi::Env env, rs2_frame* frame) {
 		EscapableHandleScope scope(env);
-		Object instance   = constructor.New({});
-		auto unwrapped	= ObjectWrap<RSFrame>::Unwrap(instance);
+		Object instance	  = constructor.New({});
+		auto unwrapped	  = ObjectWrap<RSFrame>::Unwrap(instance);
 		unwrapped->frame_ = frame;
 
 		return scope.Escape(napi_value(instance)).ToObject();
@@ -84,7 +84,6 @@ class RSFrame : public ObjectWrap<RSFrame> {
 	}
 
   private:
-
 	void DestroyMe() {
 		if (this->error_) rs2_free_error(error_);
 		if (this->frame_) rs2_release_frame(frame_);
@@ -115,16 +114,16 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		auto velocity_name			   = String::New(env, "velocity");
 		auto acceleration_name		   = String::New(env, "acceleration");
 		auto rotation_name			   = String::New(env, "rotation");
-		auto angular_velocity_name	 = String::New(env, "angularVelocity");
+		auto angular_velocity_name	   = String::New(env, "angularVelocity");
 		auto angular_acceleration_name = String::New(env, "angularAcceleration");
 		auto tracker_confidence_name   = String::New(env, "trackerConfidence");
-		auto mapper_confidence_name	= String::New(env, "mapperConfidence");
+		auto mapper_confidence_name	   = String::New(env, "mapperConfidence");
 
 		auto translation_obj		  = obj.Get(translation_name).ToObject();
 		auto velocity_obj			  = obj.Get(velocity_name).ToObject();
 		auto acceleration_obj		  = obj.Get(acceleration_name).ToObject();
 		auto rotation_obj			  = obj.Get(rotation_name).ToObject();
-		auto angular_velocity_obj	 = obj.Get(angular_velocity_name).ToObject();
+		auto angular_velocity_obj	  = obj.Get(angular_velocity_name).ToObject();
 		auto angular_acceleration_obj = obj.Get(angular_acceleration_name).ToObject();
 
 		FillAFloatVector(env, translation_obj, pose.translation);
@@ -184,7 +183,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		  = GetNativeResult<const void*>(rs2_get_frame_data, &this->error_, this->frame_, &this->error_);
 		const auto stride
 		  = GetNativeResult<int>(rs2_get_frame_stride_in_bytes, &this->error_, this->frame_, &this->error_);
-		const auto height   = GetNativeResult<int>(rs2_get_frame_height, &this->error_, this->frame_, &this->error_);
+		const auto height	= GetNativeResult<int>(rs2_get_frame_height, &this->error_, this->frame_, &this->error_);
 		const size_t length = stride * height;
 		if (buffer && array_buffer.ByteLength() >= length) { memcpy(array_buffer.Data(), buffer, length); }
 		return info.Env().Undefined();
@@ -311,7 +310,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		size_t count = GetNativeResult<size_t>(rs2_get_frame_points_count, &this->error_, this->frame_, &this->error_);
 		if (!vertices || !count) return info.Env().Undefined();
 
-		uint32_t step   = 3 * sizeof(float);
+		uint32_t step	= 3 * sizeof(float);
 		uint32_t len	= count * step;
 		auto vertex_buf = static_cast<uint8_t*>(malloc(len));
 
@@ -323,7 +322,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 	Napi::Value GetVerticesBufferLen(const CallbackInfo& info) {
 		const size_t count
 		  = GetNativeResult<size_t>(rs2_get_frame_points_count, &this->error_, this->frame_, &this->error_);
-		const uint32_t step   = 3 * sizeof(float);
+		const uint32_t step	  = 3 * sizeof(float);
 		const uint32_t length = count * step;
 		return Number::New(info.Env(), length);
 	}
@@ -331,7 +330,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 	Napi::Value GetTexCoordBufferLen(const CallbackInfo& info) {
 		const size_t count
 		  = GetNativeResult<size_t>(rs2_get_frame_points_count, &this->error_, this->frame_, &this->error_);
-		const uint32_t step   = 2 * sizeof(int);
+		const uint32_t step	  = 2 * sizeof(int);
 		const uint32_t length = count * step;
 		return Number::New(info.Env(), length);
 	}
@@ -345,7 +344,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		  = GetNativeResult<size_t>(rs2_get_frame_points_count, &this->error_, this->frame_, &this->error_);
 		if (!vertBuf || !count) return Boolean::New(info.Env(), false);
 
-		const uint32_t step   = 3 * sizeof(float);
+		const uint32_t step	  = 3 * sizeof(float);
 		const uint32_t length = count * step;
 		if (array_buffer.ByteLength() < length) return Boolean::New(info.Env(), false);
 
@@ -360,7 +359,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		size_t count = GetNativeResult<size_t>(rs2_get_frame_points_count, &this->error_, this->frame_, &this->error_);
 		if (!coords || !count) return info.Env().Undefined();
 
-		uint32_t step	 = 2 * sizeof(int);
+		uint32_t step	  = 2 * sizeof(int);
 		uint32_t len	  = count * step;
 		auto texcoord_buf = static_cast<uint8_t*>(malloc(len));
 
@@ -378,7 +377,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		  = GetNativeResult<size_t>(rs2_get_frame_points_count, &this->error_, this->frame_, &this->error_);
 		if (!coords || !count) return Boolean::New(info.Env(), false);
 
-		const uint32_t step   = 2 * sizeof(int);
+		const uint32_t step	  = 2 * sizeof(int);
 		const uint32_t length = count * step;
 		if (array_buffer.ByteLength() < length) return Boolean::New(info.Env(), false);
 
@@ -394,7 +393,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 
 	Napi::Value ExportToPly(const CallbackInfo& info) {
 		auto texture = ObjectWrap<RSFrame>::Unwrap(info[1].ToObject());
-		auto file	= std::string(info[0].ToString()).c_str();
+		auto file	 = std::string(info[0].ToString()).c_str();
 		if (!texture) return info.Env().Undefined();
 
 		rs2_frame* ptr = nullptr;

@@ -17,9 +17,8 @@ class RSSyncer : public ObjectWrap<RSSyncer> {
 		  "RSSyncer",
 		  {
 			InstanceMethod("destroy", &RSSyncer::Destroy),
-			InstanceMethod("waitForFrames", &RSSyncer::WaitForFrames),
 			InstanceMethod("pollForFrames", &RSSyncer::PollForFrames),
-
+			InstanceMethod("waitForFrames", &RSSyncer::WaitForFrames),
 		  });
 		constructor = Napi::Persistent(func);
 		constructor.SuppressDestruct();
@@ -27,6 +26,7 @@ class RSSyncer : public ObjectWrap<RSSyncer> {
 
 		return exports;
 	}
+
 	static Object NewInstance(Napi::Env env) {
 		EscapableHandleScope scope(env);
 		Object instance = constructor.New({});
@@ -42,7 +42,7 @@ class RSSyncer : public ObjectWrap<RSSyncer> {
 		this->syncer_
 		  = GetNativeResult<rs2_processing_block*>(rs2_create_sync_processing_block, &this->error_, &this->error_);
 		this->frame_queue_ = GetNativeResult<rs2_frame_queue*>(rs2_create_frame_queue, &this->error_, 1, &this->error_);
-		auto callback	  = new FrameCallbackForFrameQueue(this->frame_queue_);
+		auto callback	   = new FrameCallbackForFrameQueue(this->frame_queue_);
 		CallNativeFunc(rs2_start_processing, &this->error_, this->syncer_, callback, &this->error_);
 	}
 
@@ -51,6 +51,12 @@ class RSSyncer : public ObjectWrap<RSSyncer> {
 	}
 
   private:
+  	static FunctionReference constructor;
+
+	rs2_processing_block* syncer_;
+	rs2_frame_queue* frame_queue_;
+	rs2_error* error_;
+	friend class RSSensor;
 
 	void DestroyMe() {
 		if (error_) rs2_free_error(error_);
@@ -59,6 +65,26 @@ class RSSyncer : public ObjectWrap<RSSyncer> {
 		syncer_ = nullptr;
 		if (frame_queue_) rs2_delete_frame_queue(frame_queue_);
 		frame_queue_ = nullptr;
+	}
+
+	Napi::Value Destroy(const CallbackInfo& info) {
+		this->DestroyMe();
+
+		return info.This();
+	}
+
+	Napi::Value PollForFrames(const CallbackInfo& info) {
+		auto frameset = ObjectWrap<RSFrameSet>::Unwrap(info[0].As<Object>());
+		if (!frameset) return Boolean::New(info.Env(), false);
+
+		rs2_frame* frame_ref = nullptr;
+		auto res
+		  = GetNativeResult<int>(rs2_poll_for_frame, &this->error_, this->frame_queue_, &frame_ref, &this->error_);
+		if (!res) return Boolean::New(info.Env(), false);
+
+		frameset->Replace(frame_ref);
+
+		return Boolean::New(info.Env(), true);
 	}
 
 	Napi::Value WaitForFrames(const CallbackInfo& info) {
@@ -73,32 +99,6 @@ class RSSyncer : public ObjectWrap<RSSyncer> {
 		frameset->Replace(frames);
 		return Boolean::New(info.Env(), true);
 	}
-
-	Napi::Value Destroy(const CallbackInfo& info) {
-		this->DestroyMe();
-
-		return info.Env().Undefined();
-	}
-
-	Napi::Value PollForFrames(const CallbackInfo& info) {
-		auto frameset = ObjectWrap<RSFrameSet>::Unwrap(info[0].As<Object>());
-		if (!frameset) return Boolean::New(info.Env(), false);
-
-		rs2_frame* frame_ref = nullptr;
-		auto res
-		  = GetNativeResult<int>(rs2_poll_for_frame, &this->error_, this->frame_queue_, &frame_ref, &this->error_);
-		if (!res) return Boolean::New(info.Env(), false);
-
-		frameset->Replace(frame_ref);
-		return Boolean::New(info.Env(), true);
-	}
-
-  private:
-	static FunctionReference constructor;
-	rs2_processing_block* syncer_;
-	rs2_frame_queue* frame_queue_;
-	rs2_error* error_;
-	friend class RSSensor;
 };
 
 Napi::FunctionReference RSSyncer::constructor;
