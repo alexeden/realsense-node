@@ -11,8 +11,20 @@ import {
 export interface RealSenseAddon {
   cleanup(): void;
   getTime(): number;
-  RSContext: new () => RSContext;
   registerErrorCallback: ErrorCallbackRegistration;
+  RSAlign: new () => RSAlign;
+  // RSColorizer: new () => RSColorizer;
+  RSConfig: new () => RSConfig;
+  RSContext: new () => RSContext;
+  RSDevice: new () => RSDevice;
+  RSDeviceList: new () => RSDeviceList;
+  RSFrame: new () => RSFrame;
+  RSFrameSet: new () => RSFrameSet;
+  RSPipeline: new () => RSPipeline;
+  RSPipelineProfile: new () => RSPipelineProfile;
+  RSSensor: new () => RSSensor;
+  RSStreamProfile: new () => RSStreamProfile;
+  RSSyncer: new () => RSSyncer;
 }
 
 type DevicesChangedCallback = (removed: RSDeviceList, added: RSDeviceList) => void;
@@ -37,7 +49,6 @@ export interface RSAlign {
   waitForFrames(): RSFrameSet;
 }
 
-// tslint:disable-next-line: no-empty-interface
 export interface RSConfig {
   destroy(): this;
   disableAllStreams(): this;
@@ -88,7 +99,6 @@ export interface RSExtrinsics {
   translation: [number, number, number];
 }
 
-// tslint:disable-next-line: no-empty-interface
 export interface RSFrame {
   canGetPoints(): boolean;
   destroy(): this;
