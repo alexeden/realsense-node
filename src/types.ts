@@ -4,9 +4,9 @@ import {
   RSOption,
   RSFormat,
   RSStream,
+  RSFrameMetadata,
+  RSConfidence,
 } from './constants';
-
-type ErrorCallbackRegistration = <T extends object>(recv: T, fn: keyof T) => void;
 
 export interface RealSenseAddon {
   cleanup(): void;
@@ -16,6 +16,20 @@ export interface RealSenseAddon {
 }
 
 type DevicesChangedCallback = (removed: RSDeviceList, added: RSDeviceList) => void;
+type ErrorCallbackRegistration = <T extends object>(recv: T, fn: keyof T) => void;
+
+export interface XYZ {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface XYZW {
+  w: number;
+  x: number;
+  y: number;
+  z: number;
+}
 
 // tslint:disable-next-line: no-empty-interface
 export interface RSConfig {
@@ -61,12 +75,12 @@ export interface RSFrame {
   getBitsPerPixel(): number;
   getData(): Uint8Array;
   getDistance(x: number, y: number): number;
-  // getFrameMetadata
+  getFrameMetadata(metadata: RSFrameMetadata, data: Uint8Array): boolean;
   getFrameNumber(): number;
   getHeight(): number;
-  // getMotionData
+  getMotionData(xyz: XYZ): this;
   getPointsCount(): number;
-  // getPoseData
+  getPoseData(data: RSPose): boolean;
   getStreamProfile(): RSStreamProfile;
   getStrideInBytes(): number;
   getTexCoordBufferLen(): number;
@@ -83,7 +97,7 @@ export interface RSFrame {
   isValid(): boolean;
   isVideoFrame(): boolean;
   keep(): this;
-  // supportsFrameMetadata
+  supportsFrameMetadata(metadata: RSFrameMetadata): boolean;
   writeData(data: ArrayBuffer): this;
   writeTextureCoordinates(coords: ArrayBuffer): boolean;
   writeVertices(vertices: ArrayBuffer): boolean;
@@ -145,6 +159,17 @@ export interface RSPipelineProfile {
   destroy(): this;
   getDevice(): RSDevice;
   getStreams(): RSStreamProfile;
+}
+
+export interface RSPose {
+  acceleration: XYZ;
+  angularAcceleration: XYZ;
+  angularVelocity: XYZ;
+  mapperConfidence: RSConfidence;
+  rotation: XYZW;
+  trackerConfidence: RSConfidence;
+  translation: XYZ;
+  velocity: XYZ;
 }
 
 export interface RSRegionOfInterest {

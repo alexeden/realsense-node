@@ -232,7 +232,7 @@ class RSFrame : public ObjectWrap<RSFrame> {
 		auto frame_data = static_cast<const float*>(
 		  GetNativeResult<const void*>(rs2_get_frame_data, &this->error_, this->frame_, &this->error_));
 		for (uint32_t i = 0; i < 3; i++) { SetAFloatInVectorObject(info.Env(), obj, i, frame_data[i]); }
-		return info.Env().Undefined();
+		return info.This();
 	}
 
 	Napi::Value GetPointsCount(const CallbackInfo& info) {

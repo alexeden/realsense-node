@@ -27,13 +27,20 @@ export enum RSCameraInfo {
   FirmwareUpdateId,
 }
 
+export enum RSConfidence {
+  Failed,
+  Low,
+  Medium,
+  High,
+}
+
 export enum RSFormat {
   /** When passed to enable stream, librealsense will try to provide best suited format */
-  ANY,
+  Any,
   /** 16-bit linear depth values. The depth is meters is equal to depth scale * pixel value. */
   Z16,
   /** 16-bit float-point disparity values. Depth->Disparity conversion : Disparity = Baseline*FocalLength/Depth. */
-  DISPARITY16,
+  Disparity16,
   /** 32-bit floating point 3D coordinates. */
   XYZ32F,
   /**
@@ -54,45 +61,116 @@ export enum RSFormat {
   /** 16-bit per-pixel grayscale image */
   Y16,
   /** Four 10 bits per pixel luminance values packed into a 5-byte macropixel */
-  RAW10,
+  Raw10,
   /** 16-bit raw image */
-  RAW16,
+  Raw16,
   /** 8-bit raw image */
-  RAW8,
+  Raw8,
   /** Similar to the standard YUYV pixel format, but packed in a different order */
   UYVY,
   /** Raw data from the motion sensor */
-  MOTION_RAW,
+  MotionRaw,
   /** Motion data packed as 3 32-bit float values, for X, Y, and Z axis */
-  MOTION_XYZ32F,
+  MotionXYZ32F,
   /** Raw data from the external sensors hooked to one of the GPIO's */
-  GPIO_RAW,
+  GpioRaw,
   /**
    * Pose data packed as floats array, containing translation vector, rotation quaternion and
    * prediction velocities and accelerations vectors
    */
-  SIX_DOF,
+  SixDof,
   /** 32-bit float-point disparity values. Depth->Disparity conversion : Disparity = Baseline*FocalLength/Depth */
-  DISPARITY32,
+  Disparity32,
   /**
    * 16-bit per-pixel grayscale image unpacked from 10 bits per pixel packed ([8:8:8:8:2222])
    * grey-scale image. The data is unpacked to LSB and padded with 6 zero bits
    */
   Y10BPACK,
-  /** 32-bit float-point depth distance value.  */
-  DISTANCE,
-  /** Bitstream encoding for video in which an image of each frame is encoded as JPEG-DIB   */
-  MJPEG,
-  /** 8-bit per pixel interleaved. 8-bit left, 8-bit right.  */
+  /** 32-bit float-point depth distance value. */
+  Distance,
+  /** Bitstream encoding for video in which an image of each frame is encoded as JPEG-DIB  */
+  Mjpeg,
+  /** 8-bit per pixel interleaved. 8-bit left, 8-bit right. */
   Y8I,
   /** 12-bit per pixel interleaved. 12-bit left, 12-bit right. Each pixel is stored in a 24-bit word in little-endian order. */
   Y12I,
-  /** multi-planar Depth 16bit + IR 10bit.  */
+  /** multi-planar Depth 16bit + IR 10bit. */
   INZI,
-  /** 8-bit IR stream.  */
+  /** 8-bit IR stream. */
   INVI,
   /** Grey-scale image as a bit-packed array. 4 pixel data stream taking 5 bytes */
   W10,
+}
+
+export enum RSFrameMetadata {
+  /** A sequential index managed per-stream. Integer value */
+  FrameCounter,
+  /** Timestamp set by device clock when data readout and transmit commence. usec */
+  FrameTimestamp,
+  /** Timestamp of the middle of sensor's exposure calculated by device. usec */
+  SensorTimestamp,
+  /** Sensor's exposure width. When Auto Exposure (AE) is on the value is controlled by firmware. usec */
+  ActualExposure,
+  /**
+   * A relative value increasing which will increase the Sensor's gain factor.
+   * When AE is set On, the value is controlled by firmware. Integer value
+   */
+  GainLevel,
+  /** Auto Exposure Mode indicator. Zero corresponds to AE switched off. */
+  AutoExposure,
+  /** White Balance setting as a color temperature. Kelvin degrees */
+  WhiteBalance,
+  /** Time of arrival in system clock */
+  TimeOfArrival,
+  /** Temperature of the device, measured at the time of the frame capture. Celsius degrees */
+  Temperature,
+  /** Timestamp get from uvc driver. usec */
+  BackendTimestamp,
+  /** Actual fps */
+  ActualFps,
+  /** Laser power value 0-360. */
+  FrameLaserPower,
+  /**
+   * @deprecated use RS2_FjRAME_METADATA_FRAME_EMITTER_MODE
+   * Laser power mode. Zero corresponds to Laser power switched off and one for switched on.
+   */
+  FrameLaserPowerMode,
+  /** Exposure priority. */
+  ExposurePriority,
+  /** Left region of interest for the auto exposure Algorithm. */
+  ExposureRoiLeft,
+  /** Right region of interest for the auto exposure Algorithm. */
+  ExposureRoiRight,
+  /** Top region of interest for the auto exposure Algorithm. */
+  ExposureRoiTop,
+  /** Bottom region of interest for the auto exposure Algorithm. */
+  ExposureRoiBottom,
+  /** Color image brightness. */
+  Brightness,
+  /** Color image contrast. */
+  Contrast,
+  /** Color image saturation. */
+  Saturation,
+  /** Color image sharpness. */
+  Sharpness,
+  /** Auto white balance temperature Mode indicator. Zero corresponds to automatic mode switched off. */
+  AutoWhiteBalanceTemperature,
+  /** Color backlight compensation. Zero corresponds to switched off. */
+  BacklightCompensation,
+  /** Color image hue. */
+  Hue,
+  /** Color image gamma. */
+  Gamma,
+  /** Color image white balance. */
+  ManualWhiteBalance,
+  /** Power Line Frequency for anti-flickering Off/50Hz/60Hz/Auto. */
+  PowerLineFrequency,
+  /** Color lowlight compensation. Zero corresponds to switched off. */
+  LowLightCompensation,
+  /** Emitter mode: 0 � all emitters disabled. 1 � laser enabled. 2 � auto laser enabled (opt). 3 � LED enabled (opt). */
+  FrameEmitterMode,
+  /** Led power value 0-360. */
+  FrameLedPower,
 }
 
 export enum RSLogSeverity {
@@ -152,7 +230,7 @@ export enum RSOption {
   EnableAutoExposure,
   /** Enable / disable color image auto-white-balance */
   EnableAutoWhiteBalance,
-  /** Provide access to several recommend sets of option presets for the depth camera  */
+  /** Provide access to several recommend sets of option presets for the depth camera */
   VisualPreset,
   /** Power of the laser emitter, with 0 meaning projector off */
   LaserPower,
@@ -179,39 +257,39 @@ export enum RSOption {
   EmitterEnabled,
   /** Number of frames the user is allowed to keep per stream. Trying to hold-on to more frames will cause frame-drops. */
   FramesQueueSize,
-  /** Total number of detected frame drops from all streams  */
+  /** Total number of detected frame drops from all streams */
   TotalFrameDrops,
-  /** Auto-Exposure modes: Static, Anti-Flicker and Hybrid  */
+  /** Auto-Exposure modes: Static, Anti-Flicker and Hybrid */
   AutoExposureMode,
-  /** Power Line Frequency control for anti-flickering Off/50Hz/60Hz/Auto  */
+  /** Power Line Frequency control for anti-flickering Off/50Hz/60Hz/Auto */
   PowerLineFrequency,
-  /** Current Asic Temperature  */
+  /** Current Asic Temperature */
   AsicTemperature,
-  /** disable error handling  */
+  /** disable error handling */
   ErrorPollingEnabled,
-  /** Current Projector Temperature  */
+  /** Current Projector Temperature */
   ProjectorTemperature,
-  /** Enable / disable trigger to be outputed from the camera to any external device on every depth frame  */
+  /** Enable / disable trigger to be outputed from the camera to any external device on every depth frame */
   OutputTriggerEnabled,
-  /** Current Motion-Module Temperature  */
+  /** Current Motion-Module Temperature */
   MotionModuleTemperature,
-  /** Number of meters represented by a single depth unit  */
+  /** Number of meters represented by a single depth unit */
   DepthUnits,
-  /** Enable/Disable automatic correction of the motion data  */
+  /** Enable/Disable automatic correction of the motion data */
   EnableMotionCorrection,
-  /** Allows sensor to dynamically ajust the frame rate depending on lighting conditions  */
+  /** Allows sensor to dynamically ajust the frame rate depending on lighting conditions */
   AutoExposurePriority,
-  /** Color scheme for data visualization  */
+  /** Color scheme for data visualization */
   ColorScheme,
-  /** Perform histogram equalization post-processing on the depth data  */
+  /** Perform histogram equalization post-processing on the depth data */
   HistogramEqualizationEnabled,
-  /** Minimal distance to the target  */
+  /** Minimal distance to the target */
   MinDistance,
-  /** Maximum distance to the target  */
+  /** Maximum distance to the target */
   MaxDistance,
-  /** Texture mapping stream unique ID  */
+  /** Texture mapping stream unique ID */
   TextureSource,
-  /** The 2D-filter effect. The specific interpretation is given within the context of the filter  */
+  /** The 2D-filter effect. The specific interpretation is given within the context of the filter */
   FilterMagnitude,
   /** 2D-filter parameter controls the weight/radius for smoothing. */
   FilterSmoothAlpha,
@@ -223,15 +301,15 @@ export enum RSOption {
   StereoBaseline,
   /** Allows dynamically ajust the converge step value of the target exposure in Auto-Exposure algorithm */
   AutoExposureConvergeStep,
-  /** Impose Inter-camera HW synchronization mode. Applicable for D400/Rolling Shutter SKUs  */
+  /** Impose Inter-camera HW synchronization mode. Applicable for D400/Rolling Shutter SKUs */
   InterCamSyncMode,
-  /** Select a stream to process  */
+  /** Select a stream to process */
   StreamFilter,
-  /** Select a stream format to process  */
+  /** Select a stream format to process */
   StreamFormatFilter,
-  /** Select a stream index to process  */
+  /** Select a stream index to process */
   StreamIndexFilter,
-  /** When supported, this option make the camera to switch the emitter state every frame. 0 for disabled, 1 for enabled  */
+  /** When supported, this option make the camera to switch the emitter state every frame. 0 for disabled, 1 for enabled */
   EmitterOnOff,
   /** Zero order point x */
   ZeroOrderPointX,
@@ -243,27 +321,27 @@ export enum RSOption {
   McTemperature,
   /** MA temperature */
   MaTemperature,
-  /** Hardware stream configuration  */
+  /** Hardware stream configuration */
   HardwarePreset,
-  /** disable global time   */
+  /** disable global time  */
   GlobalTimeEnabled,
   /** APD temperature */
   ApdTemperature,
-  /** Enable an internal map  */
+  /** Enable an internal map */
   EnableMapping,
-  /** Enable appearance based relocalization  */
+  /** Enable appearance based relocalization */
   EnableRelocalization,
-  /** Enable position jumping  */
+  /** Enable position jumping */
   EnablePoseJumping,
-  /** Enable dynamic calibration  */
+  /** Enable dynamic calibration */
   EnableDynamicCalibration,
   /** Offset from sensor to depth origin in millimetrers */
   DepthOffset,
   /** Power of the LED (light emitting diode), with 0 meaning LED off */
   LedPower,
-  /** Toggle Zero-Order mode  */
+  /** Toggle Zero-Order mode */
   ZeroOrderEnabled,
-  /** Preserve previous map when starting  */
+  /** Preserve previous map when starting */
   EnableMapPreservation,
 }
 
