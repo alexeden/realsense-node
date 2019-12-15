@@ -30,7 +30,7 @@ class RSStreamProfile : public ObjectWrap<RSStreamProfile> {
 			InstanceMethod("isMotionProfile", &RSStreamProfile::IsMotionProfile),
 			InstanceMethod("isVideoProfile", &RSStreamProfile::IsVideoProfile),
 			InstanceMethod("stream", &RSStreamProfile::Stream),
-			InstanceMethod("uniqueID", &RSStreamProfile::UniqueID),
+			InstanceMethod("uniqueId", &RSStreamProfile::UniqueId),
 			InstanceMethod("width", &RSStreamProfile::Width),
 		  });
 		constructor = Napi::Persistent(func);
@@ -194,7 +194,7 @@ class RSStreamProfile : public ObjectWrap<RSStreamProfile> {
 		return Number::New(info.Env(), this->stream_);
 	}
 
-	Napi::Value UniqueID(const CallbackInfo& info) {
+	Napi::Value UniqueId(const CallbackInfo& info) {
 		return Number::New(info.Env(), this->unique_id_);
 	}
 

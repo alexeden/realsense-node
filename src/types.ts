@@ -2,6 +2,8 @@ import {
   RSLogSeverity,
   RSNotificationCategory,
   RSOption,
+  RSFormat,
+  RSStream,
 } from './constants';
 
 type ErrorCallbackRegistration = <T extends object>(recv: T, fn: keyof T) => void;
@@ -45,6 +47,11 @@ export interface RSDeviceList {
   length(): number;
 }
 
+export interface RSExtrinsics {
+  rotation: [number, number, number, number, number, number, number, number, number];
+  translation: [number, number, number];
+}
+
 // tslint:disable-next-line: no-empty-interface
 export interface RSFrame {
 
@@ -57,6 +64,23 @@ export interface RSFrameSet {
   indexToStream(index: number): number;
   indexToStreamIndex(index: number): number;
   replaceFrame(stream: number, streamIndex: number, frame: RSFrame): boolean;
+}
+
+export interface RSIntrinsics {
+  coeffs: [number, number, number, number, number];
+  fx: number;
+  fy: number;
+  height: number;
+  model: number;
+  ppx: number;
+  ppy: number;
+  width: number;
+}
+
+export interface RSMotionIntrinsics {
+  biasVariances: [number, number, number];
+  data: [number, number, number];
+  noiseVariances: [number, number, number];
 }
 
 export interface RSNotification {
