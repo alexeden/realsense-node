@@ -22,6 +22,8 @@ class RSSensor
 		  env,
 		  "RSSensor",
 		  {
+			InstanceAccessor("isDepthSensor", &RSSensor::IsDepthSensor, nullptr),
+			InstanceAccessor("isROISensor", &RSSensor::IsROISensor, nullptr),
 			InstanceMethod("close", &RSSensor::Close),
 			InstanceMethod("destroy", &RSSensor::Destroy),
 			InstanceMethod("getCameraInfo", &RSSensor::GetCameraInfo),
@@ -32,9 +34,7 @@ class RSSensor
 			InstanceMethod("getOptionValueDescription", &RSSensor::GetOptionValueDescription),
 			InstanceMethod("getRegionOfInterest", &RSSensor::GetRegionOfInterest),
 			InstanceMethod("getStreamProfiles", &RSSensor::GetStreamProfiles),
-			InstanceMethod("isDepthSensor", &RSSensor::IsDepthSensor),
 			InstanceMethod("isOptionReadonly", &RSSensor::IsOptionReadonly),
-			InstanceMethod("isROISensor", &RSSensor::IsROISensor),
 			InstanceMethod("onNotification", &RSSensor::OnNotification),
 			InstanceMethod("openMultipleStream", &RSSensor::OpenMultipleStream),
 			InstanceMethod("openStream", &RSSensor::OpenStream),
