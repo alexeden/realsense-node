@@ -41,8 +41,8 @@
           'OS=="mac"',
           {
             "libraries": [
-              '<(module_root_dir)/librealsense/build/<(configuration)/librealsense2.dylib',
-              '-Wl,-rpath,@loader_path/../../librealsense/build/<(configuration)',
+              '<(module_root_dir)/librealsense/build/librealsense2.dylib',
+              '-Wl,-rpath,@loader_path/../../librealsense/build',
             ],
             'xcode_settings': {
               'GCC_ENABLE_CPP_EXCEPTIONS': 'YES',
