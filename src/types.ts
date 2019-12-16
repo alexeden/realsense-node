@@ -244,19 +244,19 @@ export interface RSSensor {
 
 export interface RSStreamProfile {
   destroy(): this;
-  format(): RSFormat;
-  fps(): number;
+  format: RSFormat;
+  fps: number;
   getExtrinsicsTo(profile: RSStreamProfile): RSExtrinsics;
   getMotionIntrinsics(): RSMotionIntrinsics;
   getVideoStreamIntrinsics(): RSIntrinsics;
-  height(): number;
-  index(): number;
-  isDefault(): number;
-  isMotionProfile(): boolean;
-  isVideoProfile(): boolean;
-  stream(): RSStreamType;
-  uniqueId(): number;
-  width(): number;
+  height: number;
+  index: number;
+  isDefault: number;
+  isMotionProfile: boolean;
+  isVideoProfile: boolean;
+  streamType: RSStreamType;
+  uniqueId: number;
+  width: number;
 }
 
 export interface RSSyncer {

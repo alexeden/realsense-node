@@ -29,7 +29,7 @@ export class PipelineProfile {
     }
     // tslint:disable-next-line: prefer-for-of
     for (let i = 0; i < profiles.length; i++) {
-      if (profiles[i].stream() === streamType && (streamIndex === -1 || (streamIndex === profiles[i].index()))) {
+      if (profiles[i].streamType === streamType && (streamIndex === -1 || (streamIndex === profiles[i].index))) {
         return profiles[i];
       }
     }

@@ -113,7 +113,7 @@ export class FrameSet {
       // the stream parameter may be RSStreamType.Any, but when we store the frame in
       // cache, we shall store its actual stream type.
       this.cacheMetadata.push({
-        stream: frame.getStreamProfile().stream(),
+        stream: frame.getStreamProfile().streamType,
         streamIndex,
       });
 

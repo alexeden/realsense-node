@@ -84,8 +84,9 @@ class RSFrameSet : public ObjectWrap<RSFrameSet> {
 	}
 
 	Napi::Value Destroy(const CallbackInfo& info) {
-		auto unwrapped = ObjectWrap<RSFrameSet>::Unwrap(info[0].As<Object>());
-		if (unwrapped) { unwrapped->DestroyMe(); }
+		// auto unwrapped = ObjectWrap<RSFrameSet>::Unwrap(info[0].As<Object>());
+		// if (unwrapped) { unwrapped->DestroyMe(); }
+        this->DestroyMe();
 
 		return info.This();
 	}
