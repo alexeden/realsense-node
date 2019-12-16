@@ -9,7 +9,7 @@ import { RSStreamType } from './constants';
  */
 export class PipelineProfile {
   constructor(
-    private readonly cxxPipelineProfile: RSPipelineProfile
+    readonly cxxPipelineProfile: RSPipelineProfile
   ) {
     deleteAutomatically(this);
   }

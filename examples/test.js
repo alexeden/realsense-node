@@ -1,4 +1,4 @@
-const { addon: rs, RSOption, Pipeline, RSStream } = require('../dist');
+const { addon: rs, RSOption, Pipeline, RSStreamType } = require('../dist');
 
 process
   .once('SIGHUP', () => {
@@ -13,14 +13,19 @@ process
 process.on('beforeExit', () => {
   rs.cleanup();
 });
+const config = new rs.RSConfig();
+// config.enableAllStreams();
+config.enableStream(RSStreamType.Depth);
+
 const pipeline = new Pipeline();
 
-const profile = pipeline.start();
+const profile = pipeline.start(config);
+
 
 const device = profile.cxxPipelineProfile.getDevice();
-console.log(device);
+
 profile.cxxPipelineProfile.getStreams().forEach(stream => {
-  console.log(`${RSStream[stream.stream()]} stream ${stream.index()}`)
+  console.log(`${RSStreamType[stream.streamType]} stream ${stream.index}`, stream);
 });
 
 console.log(pipeline.waitForFrames());
