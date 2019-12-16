@@ -1,11 +1,18 @@
+import { RSDevice } from './types';
+import { addon, deleteAutomatically } from './addon';
+
 /**
  * A RealSense camera
  */
-class Device {
-  constructor(cxxDev, autoDelete = true) {
-    this.cxxDev = cxxDev;
+export class Device extends addon.RSDevice {
+  constructor(
+    private readonly cxxDev: RSDevice,
+    autoDelete = true
+  ) {
+    super();
     if (autoDelete) {
-      internal.addObject(this);
+      deleteAutomatically(this);
+      // internal.addObject(this);
     }
   }
 

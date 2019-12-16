@@ -13,48 +13,48 @@ export class FrameSet {
   size: number;
 
   constructor(
-    private readonly rsFrameSet = addon.createFrameSet()
+    private readonly cxxFrameSet = addon.createFrameSet()
   ) {
     this.cache = [];
     this.cacheMetadata = [];
     this.__update();
   }
 
-  /**
-   * Count of frames
-   *
-   * @return {Integer}
-   */
-  get size() {
-    return this.sizeValue;
-  }
+  // /**
+  //  * Count of frames
+  //  *
+  //  * @return {Integer}
+  //  */
+  // get size() {
+  //   return this.sizeValue;
+  // }
 
-  /**
-   * Get the depth frame
-   *
-   * @return {DepthFrame|undefined}
-   */
-  get depthFrame() {
-    return this.getFrame(RSStream.Depth, 0);
-  }
+  // /**
+  //  * Get the depth frame
+  //  *
+  //  * @return {DepthFrame|undefined}
+  //  */
+  // get depthFrame() {
+  //   return this.getFrame(RSStream.Depth, 0);
+  // }
 
-  /**
-   * Get the color frame
-   *
-   * @return {VideoFrame|undefined}
-   */
-  get colorFrame() {
-    return this.getFrame(RSStream.Color, 0);
-  }
+  // /**
+  //  * Get the color frame
+  //  *
+  //  * @return {VideoFrame|undefined}
+  //  */
+  // get colorFrame() {
+  //   return this.getFrame(RSStream.Color, 0);
+  // }
 
-  /**
-   * Get the infrared frame
-   * @param {Integer} streamIndex index of the expected infrared stream
-   * @return {VideoFrame|undefined}
-   */
-  getInfraredFrame(streamIndex = 0) {
-    return this.getFrame(RSStream.Infrared, streamIndex);
-  }
+  // /**
+  //  * Get the infrared frame
+  //  * @param {Integer} streamIndex index of the expected infrared stream
+  //  * @return {VideoFrame|undefined}
+  //  */
+  // getInfraredFrame(streamIndex = 0) {
+  //   return this.getFrame(RSStream.Infrared, streamIndex);
+  // }
 
   /**
    * Get the frame at specified index
@@ -63,12 +63,11 @@ export class FrameSet {
    * stream index)
    * @return {DepthFrame|VideoFrame|Frame|undefined}
    */
-  at(index) {
-    const funcName = 'FrameSet.at()';
-    checkArgumentLength(1, 1, arguments.length, funcName);
-    checkArgumentType(arguments, 'number', 0, funcName, 0, this.size);
-    return this.getFrame(this.rsFrameSet.indexToStream(index),
-        this.rsFrameSet.indexToStreamIndex(index));
+  at(index: number) {
+    return this.getFrame(
+      this.cxxFrameSet.indexToStream(index),
+      this.cxxFrameSet.indexToStreamIndex(index)
+    );
   }
 
   /**
@@ -87,7 +86,7 @@ export class FrameSet {
   }
 
   __internalGetFrame(stream, streamIndex) {
-    let cxxFrame = this.rsFrameSet.getFrame(stream, streamIndex);
+    let cxxFrame = this.cxxFrameSet.getFrame(stream, streamIndex);
     return (cxxFrame ? Frame._internalCreateFrame(cxxFrame) : undefined);
   }
 
@@ -126,7 +125,7 @@ export class FrameSet {
 
       // as cache metadata entries always use actual stream type, we use the actual
       // stream types to easy native from processing RSStream.Any
-      if (! this.rsFrameSet.replaceFrame(
+      if (! this.cxxFrameSet.replaceFrame(
           this.cacheMetadata[idx].stream, streamIndex, frame.cxxFrame)) {
         this.cache[idx] = undefined;
         this.cacheMetadata[idx] = undefined;
@@ -143,9 +142,7 @@ export class FrameSet {
    * matching stream
    * @return {DepthFrame|VideoFrame|Frame|undefined}
    */
-  getFrame(stream, streamIndex = 0) {
-    const funcName = 'FrameSet.getFrame()';
-    checkArgumentLength(1, 2, arguments.length, funcName);
+  getFrame(stream: RSStream, streamIndex = 0) {
     const s = checkArgumentType(arguments, constants.stream, 0, funcName);
     if (arguments.length === 2) {
       checkArgumentType(arguments, 'integer', 1, funcName);
@@ -154,7 +151,7 @@ export class FrameSet {
   }
 
   __update() {
-    this.sizeValue = this.rsFrameSet.getSize();
+    this.sizeValue = this.cxxFrameSet.getSize();
   }
 
   releaseCache() {
@@ -169,7 +166,7 @@ export class FrameSet {
 
   release() {
     this.releaseCache();
-    if (this.rsFrameSet) this.rsFrameSet.destroy();
+    if (this.cxxFrameSet) this.cxxFrameSet.destroy();
   }
 
   /**
@@ -179,6 +176,6 @@ export class FrameSet {
    */
   destroy() {
     this.release();
-    this.rsFrameSet = undefined;
+    this.cxxFrameSet = undefined;
   }
 }

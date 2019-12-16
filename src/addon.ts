@@ -1,6 +1,7 @@
 import { RealSenseAddon } from './types';
 
-const addon: RealSenseAddon = require('bindings')('realsense_node');
+export const addon: RealSenseAddon = require('bindings')('realsense_node');
+
 
 addon.registerErrorCallback(
   {
@@ -11,8 +12,10 @@ addon.registerErrorCallback(
   'callback'
 );
 
-interface Destroyable { destroy(): this; }
+interface Destroyable { destroy(): unknown; }
 const destroyables: Destroyable[] = [];
+
+export const deleteAutomatically = <T extends Destroyable>(obj: T) => destroyables.push(obj);
 
 export const getTime = addon.getTime;
 

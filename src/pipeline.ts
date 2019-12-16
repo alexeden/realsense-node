@@ -1,4 +1,4 @@
-import * as addon from './addon';
+import { addon, deleteAutomatically } from './addon';
 import { RSContext, RSPipeline, RSFrameSet } from './types';
 
 export class Pipeline {
@@ -20,13 +20,14 @@ export class Pipeline {
   private started: boolean;
 
   constructor() {
-    this.ctx = addon.createContext();
-    this.pipeline = addon.createPipeline();
-    this.frameSet = addon.createFrameSet();
+    this.ctx = new addon.RSContext();
+    this.pipeline = new addon.RSPipeline();
+    this.frameSet = new addon.RSFrameSet();
     this.pipeline.create(this.ctx);
     this.started = false;
 
     // internal.addObject(this);
+    deleteAutomatically(this);
   }
 
   /**
