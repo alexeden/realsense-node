@@ -141,11 +141,11 @@ export interface RSFrame {
 
 export interface RSFrameSet {
   destroy(): this;
-  getFrame(stream: number, streamIndex: number): RSFrame;
+  getFrame(stream: RSStream, streamIndex: number): RSFrame;
   getSize(): number;
-  indexToStream(index: number): number;
+  indexToStream(index: number): RSStream;
   indexToStreamIndex(index: number): number;
-  replaceFrame(stream: number, streamIndex: number, frame: RSFrame): boolean;
+  replaceFrame(stream: RSStream, streamIndex: number, frame: RSFrame): boolean;
 }
 
 export interface RSIntrinsics {
