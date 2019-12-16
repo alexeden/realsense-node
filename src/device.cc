@@ -88,6 +88,19 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 	}
 
   private:
+  	static FunctionReference constructor;
+
+	rs2_device* dev_;
+	rs2_error* error_;
+	DeviceType type_;
+	friend class RSContext;
+	friend class DevicesChangedCallbackInfo;
+	friend class FrameCallbackInfo;
+	friend class RSPipeline;
+	friend class RSDeviceList;
+	friend class RSDeviceHub;
+	friend class PlaybackStatusCallbackInfo;
+
 	void DestroyMe() {
 		if (error_) rs2_free_error(error_);
 		error_ = nullptr;
@@ -333,18 +346,6 @@ class RSDevice : public Napi::ObjectWrap<RSDevice> {
 
 		return (error_ || !val) ? false : true;
 	}
-	static FunctionReference constructor;
-	rs2_device* dev_;
-	rs2_error* error_;
-	DeviceType type_;
-	std::string status_changed_callback_method_name_;
-	friend class RSContext;
-	friend class DevicesChangedCallbackInfo;
-	friend class FrameCallbackInfo;
-	friend class RSPipeline;
-	friend class RSDeviceList;
-	friend class RSDeviceHub;
-	friend class PlaybackStatusCallbackInfo;
 };
 
 FunctionReference RSDevice::constructor;

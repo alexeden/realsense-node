@@ -38,49 +38,51 @@ class FrameCallbackForProc : public rs2_frame_callback {
 	explicit FrameCallbackForProc(std::shared_ptr<ThreadSafeCallback> fn, void* data)
 	  : fn_(fn)
 	  , callback_data_(data) {
+		std::cerr << "Constructing FrameCallbackForProc" << std::endl;
 	}
 	void on_frame(rs2_frame* frame) override {
-        this->fn_->call([frame](Napi::Env env, std::vector<napi_value>& args) {
-            std::cerr << __FILE__ << ":" << __LINE__ << "\tFrameCallbackForProc::on_frame" << std::endl;
-            throw "Not implemented!";
-        });
+		this->fn_->call([frame](Napi::Env env, std::vector<napi_value>& args) {
+			std::cerr << __FILE__ << ":" << __LINE__ << "\tFrameCallbackForProc::on_frame" << std::endl;
+			throw "Not implemented!";
+		});
 	}
 	void release() override {
 		delete this;
 	}
 };
 
-	class FrameCallbackForFrameQueue : public rs2_frame_callback {
-	  public:
-		explicit FrameCallbackForFrameQueue(rs2_frame_queue* queue)
-		  : frame_queue_(queue) {
-		}
-		void on_frame(rs2_frame* frame) override {
-			if (frame && frame_queue_) rs2_enqueue_frame(frame, frame_queue_);
-		}
-		void release() override {
-			delete this;
-		}
-		rs2_frame_queue* frame_queue_;
-	};
+class FrameCallbackForFrameQueue : public rs2_frame_callback {
+  public:
+	explicit FrameCallbackForFrameQueue(rs2_frame_queue* queue)
+	  : frame_queue_(queue) {
+	}
+	void on_frame(rs2_frame* frame) override {
+		if (frame && frame_queue_) rs2_enqueue_frame(frame, frame_queue_);
+	}
+	void release() override {
+		delete this;
+	}
+	rs2_frame_queue* frame_queue_;
+};
 
-	class FrameCallbackForProcessingBlock : public rs2_frame_callback {
-	  public:
-		explicit FrameCallbackForProcessingBlock(rs2_processing_block* block_ptr)
-		  : block_(block_ptr)
-		  , error_(nullptr) {
-		}
-		virtual ~FrameCallbackForProcessingBlock() {
-			if (error_) rs2_free_error(error_);
-		}
-		void on_frame(rs2_frame* frame) override {
-			rs2_process_frame(block_, frame, &error_);
-		}
-		void release() override {
-			delete this;
-		}
-		rs2_processing_block* block_;
-		rs2_error* error_;
-	};
+class FrameCallbackForProcessingBlock : public rs2_frame_callback {
+  public:
+	explicit FrameCallbackForProcessingBlock(rs2_processing_block* block_ptr)
+	  : block_(block_ptr)
+	  , error_(nullptr) {
+		std::cerr << "Constructing FrameCallbackForProcessingBlock" << std::endl;
+	}
+	virtual ~FrameCallbackForProcessingBlock() {
+		if (error_) rs2_free_error(error_);
+	}
+	void on_frame(rs2_frame* frame) override {
+		rs2_process_frame(block_, frame, &error_);
+	}
+	void release() override {
+		delete this;
+	}
+	rs2_processing_block* block_;
+	rs2_error* error_;
+};
 
 #endif

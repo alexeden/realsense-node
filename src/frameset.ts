@@ -1,10 +1,10 @@
 import { addon } from './addon';
 // import { RSContext, RSPipeline, RSFrameSet } from './types';
-import { RSStream } from './constants';
+import { RSStreamType } from './constants';
 import { RSFrame } from './types';
 
 interface CachedMetadata {
-  stream: RSStream;
+  stream: RSStreamType;
   streamIndex: number;
 }
 
@@ -29,8 +29,6 @@ export class FrameSet {
 
   /**
    * Count of frames
-   *
-   * @return {Integer}
    */
   get size() {
     return this.cxxFrameSet.getSize();
@@ -42,7 +40,7 @@ export class FrameSet {
   //  * @return {DepthFrame|undefined}
   //  */
   // get depthFrame() {
-  //   return this.getFrame(RSStream.Depth, 0);
+  //   return this.getFrame(RSStreamType.Depth, 0);
   // }
 
   // /**
@@ -51,7 +49,7 @@ export class FrameSet {
   //  * @return {VideoFrame|undefined}
   //  */
   // get colorFrame() {
-  //   return this.getFrame(RSStream.Color, 0);
+  //   return this.getFrame(RSStreamType.Color, 0);
   // }
 
   // /**
@@ -60,7 +58,7 @@ export class FrameSet {
   //  * @return {VideoFrame|undefined}
   //  */
   // getInfraredFrame(streamIndex = 0) {
-  //   return this.getFrame(RSStream.Infrared, streamIndex);
+  //   return this.getFrame(RSStreamType.Infrared, streamIndex);
   // }
 
   /**
@@ -77,11 +75,11 @@ export class FrameSet {
     );
   }
 
-  findCachedFrameIndex(
-    stream: RSStream,
+  private findCachedFrameIndex(
+    stream: RSStreamType,
     streamIndex: number
   ) {
-    if (stream === RSStream.Any) {
+    if (stream === RSStreamType.Any) {
       return (this.cacheMetadata.length ? 0 : undefined);
     }
 
@@ -105,14 +103,14 @@ export class FrameSet {
    * matching stream
    * @return {DepthFrame|VideoFrame|Frame|undefined}
    */
-  getFrame(stream: RSStream, streamIndex = 0) {
+  getFrame(stream: RSStreamType, streamIndex = 0) {
     let idx = this.findCachedFrameIndex(stream, streamIndex);
     if (idx === undefined) {
       const frame = this.cxxFrameSet.getFrame(stream, streamIndex);
       if (!frame) return undefined;
 
       this.cache.push(frame);
-      // the stream parameter may be RSStream.Any, but when we store the frame in
+      // the stream parameter may be RSStreamType.Any, but when we store the frame in
       // cache, we shall store its actual stream type.
       this.cacheMetadata.push({
         stream: frame.getStreamProfile().stream(),
@@ -125,7 +123,7 @@ export class FrameSet {
       const frame = this.cache[idx]!;
 
       // as cache metadata entries always use actual stream type, we use the actual
-      // stream types to easy native from processing RSStream.Any
+      // stream types to easy native from processing RSStreamType.Any
       if (!this.cxxFrameSet.replaceFrame(this.cacheMetadata[idx]!.stream, streamIndex, frame)) {
         this.cache[idx] = undefined;
         this.cacheMetadata[idx] = undefined;
@@ -135,7 +133,19 @@ export class FrameSet {
     return this.cache[idx];
   }
 
-  releaseCache() {
+  destroy() {
+    this.clearCache();
+    if (this.cxxFrameSet) this.cxxFrameSet.destroy();
+  }
+
+  releaseAndReturn() {
+    this.destroy();
+
+    return this.cxxFrameSet;
+  }
+
+
+  private clearCache() {
     this.cache.forEach(f => {
       if (f) {
         f.getStreamProfile().destroy();
@@ -144,10 +154,5 @@ export class FrameSet {
     });
     this.cache = [];
     this.cacheMetadata = [];
-  }
-
-  release() {
-    this.releaseCache();
-    if (this.cxxFrameSet) this.cxxFrameSet.destroy();
   }
 }

@@ -1,5 +1,7 @@
 import { addon, deleteAutomatically } from './addon';
-import { RSPipeline, RSFrameSet } from './types';
+import { RSPipeline } from './types';
+import { FrameSet } from './frameset';
+import { PipelineProfile } from './pipeline-profile';
 
 export class Pipeline {
   /**
@@ -14,19 +16,18 @@ export class Pipeline {
    * Syntax 2 used the context created by application
    * @param {Context} [context] - the {@link Context} that is being used by the pipeline
    */
-  private readonly pipeline: RSPipeline;
-  private readonly frameSet: RSFrameSet;
+  private readonly cxxPipeline: RSPipeline;
+  private readonly frameSet: FrameSet;
   private started: boolean;
 
   constructor(
     private readonly ctx = new addon.RSContext()
   ) {
-    this.pipeline = new addon.RSPipeline();
-    this.frameSet = new addon.RSFrameSet();
-    this.pipeline.create(this.ctx);
+    this.cxxPipeline = new addon.RSPipeline();
+    this.frameSet = new FrameSet();
+    this.cxxPipeline.create(this.ctx);
     this.started = false;
 
-    // internal.addObject(this);
     deleteAutomatically(this);
   }
 
@@ -35,7 +36,7 @@ export class Pipeline {
    */
   destroy() {
     this.stop();
-    this.pipeline.destroy();
+    this.cxxPipeline.destroy();
     this.ctx.destroy();
     this.frameSet.destroy();
   }
@@ -51,16 +52,9 @@ export class Pipeline {
    */
   start() {
     if (this.started === true) return undefined;
+    this.started = true;
 
-    return this.pipeline.start();
-    // if (arguments.length === 0) {
-    //   this.started = true;
-    //   return new PipelineProfile(this.cxxPipeline.start());
-    // } else {
-    //   checkArgumentType(arguments, Config, 0, funcName);
-    //   this.started = true;
-    //   return new PipelineProfile(this.cxxPipeline.startWithConfig(arguments[0].cxxConfig));
-    // }
+    return new PipelineProfile(this.cxxPipeline.start());
   }
 
   /**
@@ -69,7 +63,7 @@ export class Pipeline {
   stop() {
     if (this.started === false) return;
 
-    this.pipeline.stop();
+    this.cxxPipeline.stop();
     this.started = false;
     this.frameSet.destroy();
   }
@@ -88,9 +82,7 @@ export class Pipeline {
    * @see See [Pipeline.latestFrame]{@link Pipeline#latestFrame}
    */
   waitForFrames(timeout = 5000) {
-    this.frameSet.destroy();
-
-    if (this.pipeline.waitForFrames(this.frameSet, timeout)) {
+    if (this.cxxPipeline.waitForFrames(this.frameSet.releaseAndReturn(), timeout)) {
       return this.frameSet;
     }
 
@@ -112,8 +104,7 @@ export class Pipeline {
    * @return {FrameSet|undefined}
    */
   pollForFrames() {
-    this.frameSet.destroy();
-    if (this.pipeline.pollForFrames(this.frameSet)) {
+    if (this.cxxPipeline.pollForFrames(this.frameSet.releaseAndReturn())) {
       return this.frameSet;
     }
 
