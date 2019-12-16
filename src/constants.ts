@@ -345,7 +345,7 @@ export enum RSOption {
   EnableMapPreservation,
 }
 
-export enum RSStream {
+export enum RSStreamType {
   Any,
   /** Native stream of depth data produced by RealSense device */
   Depth,

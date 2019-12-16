@@ -3,7 +3,7 @@ import {
   RSNotificationCategory,
   RSOption,
   RSFormat,
-  RSStream,
+  RSStreamType,
   RSFrameMetadata,
   RSConfidence,
 } from './constants';
@@ -141,11 +141,11 @@ export interface RSFrame {
 
 export interface RSFrameSet {
   destroy(): this;
-  getFrame(stream: RSStream, streamIndex: number): RSFrame;
+  getFrame(stream: RSStreamType, streamIndex: number): RSFrame;
   getSize(): number;
-  indexToStream(index: number): RSStream;
+  indexToStream(index: number): RSStreamType;
   indexToStreamIndex(index: number): number;
-  replaceFrame(stream: RSStream, streamIndex: number, frame: RSFrame): boolean;
+  replaceFrame(stream: RSStreamType, streamIndex: number, frame: RSFrame): boolean;
 }
 
 export interface RSIntrinsics {
@@ -194,7 +194,7 @@ export interface RSPipeline {
 export interface RSPipelineProfile {
   destroy(): this;
   getDevice(): RSDevice;
-  getStreams(): RSStreamProfile;
+  getStreams(): RSStreamProfile[];
 }
 
 export interface RSPose {
@@ -216,6 +216,8 @@ export interface RSRegionOfInterest {
 }
 
 export interface RSSensor {
+  readonly isDepthSensor: boolean;
+  readonly isROISensor: boolean;
   close(): this;
   destroy(): this;
   getCameraInfo(index: number): string;
@@ -226,9 +228,7 @@ export interface RSSensor {
   getOptionValueDescription(option: RSOption, value: number): string;
   getRegionOfInterest(): RSRegionOfInterest;
   getStreamProfiles(): RSStreamProfile;
-  isDepthSensor(): boolean;
   isOptionReadonly(option: RSOption): boolean;
-  isROISensor(): boolean;
   onNotification(callback: (notification: RSNotification) => void): this;
   openMultipleStream(streams: RSStreamProfile[]): this;
   openStream(stream: RSStreamProfile): this;
@@ -254,7 +254,7 @@ export interface RSStreamProfile {
   isDefault(): number;
   isMotionProfile(): boolean;
   isVideoProfile(): boolean;
-  stream(): RSStream;
+  stream(): RSStreamType;
   uniqueId(): number;
   width(): number;
 }
