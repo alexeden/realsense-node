@@ -1,5 +1,5 @@
 import { addon, deleteAutomatically } from './addon';
-import { RSContext, RSPipeline, RSFrameSet } from './types';
+import { RSPipeline, RSFrameSet } from './types';
 
 export class Pipeline {
   /**
@@ -14,13 +14,13 @@ export class Pipeline {
    * Syntax 2 used the context created by application
    * @param {Context} [context] - the {@link Context} that is being used by the pipeline
    */
-  private readonly ctx: RSContext;
   private readonly pipeline: RSPipeline;
   private readonly frameSet: RSFrameSet;
   private started: boolean;
 
-  constructor() {
-    this.ctx = new addon.RSContext();
+  constructor(
+    private readonly ctx = new addon.RSContext()
+  ) {
     this.pipeline = new addon.RSPipeline();
     this.frameSet = new addon.RSFrameSet();
     this.pipeline.create(this.ctx);
@@ -65,8 +65,6 @@ export class Pipeline {
 
   /**
    * Stop streaming
-   *
-   * @return {undefined}
    */
   stop() {
     if (this.started === false) return;
