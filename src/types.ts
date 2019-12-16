@@ -188,7 +188,7 @@ export interface RSPipeline {
   start(): RSPipelineProfile;
   startWithConfig(config: RSConfig): RSPipelineProfile;
   stop(): this;
-  waitForFrames(frameset: RSFrameSet): boolean;
+  waitForFrames(frameset: RSFrameSet, timeout: number): boolean;
 }
 
 export interface RSPipelineProfile {

@@ -50,18 +50,17 @@ export class Pipeline {
    * @return {@link PipelineProfile}
    */
   start() {
-    const funcName = 'Pipeline.start()';
-    checkArgumentLength(0, 1, arguments.length, funcName);
     if (this.started === true) return undefined;
 
-    if (arguments.length === 0) {
-      this.started = true;
-      return new PipelineProfile(this.cxxPipeline.start());
-    } else {
-      checkArgumentType(arguments, Config, 0, funcName);
-      this.started = true;
-      return new PipelineProfile(this.cxxPipeline.startWithConfig(arguments[0].cxxConfig));
-    }
+    return this.pipeline.start();
+    // if (arguments.length === 0) {
+    //   this.started = true;
+    //   return new PipelineProfile(this.cxxPipeline.start());
+    // } else {
+    //   checkArgumentType(arguments, Config, 0, funcName);
+    //   this.started = true;
+    //   return new PipelineProfile(this.cxxPipeline.startWithConfig(arguments[0].cxxConfig));
+    // }
   }
 
   /**
@@ -74,7 +73,7 @@ export class Pipeline {
 
     this.pipeline.stop();
     this.started = false;
-    this.frameSet.release();
+    this.frameSet.destroy();
   }
 
   /**
@@ -91,14 +90,12 @@ export class Pipeline {
    * @see See [Pipeline.latestFrame]{@link Pipeline#latestFrame}
    */
   waitForFrames(timeout = 5000) {
-    const funcName = 'Pipeline.waitForFrames()';
-    checkArgumentLength(0, 1, arguments.length, funcName);
-    checkArgumentType(arguments, 'number', 0, funcName);
-    this.frameSet.release();
-    if (this.cxxPipeline.waitForFrames(this.frameSet.cxxFrameSet, timeout)) {
-      this.frameSet.__update();
+    this.frameSet.destroy();
+
+    if (this.pipeline.waitForFrames(this.frameSet, timeout)) {
       return this.frameSet;
     }
+
     return undefined;
   }
 
@@ -117,11 +114,11 @@ export class Pipeline {
    * @return {FrameSet|undefined}
    */
   pollForFrames() {
-    this.frameSet.release();
-    if (this.cxxPipeline.pollForFrames(this.frameSet.cxxFrameSet)) {
-      this.frameSet.__update();
+    this.frameSet.destroy();
+    if (this.pipeline.pollForFrames(this.frameSet)) {
       return this.frameSet;
     }
+
     return undefined;
   }
 
@@ -137,9 +134,9 @@ export class Pipeline {
    * @return {PipelineProfile} the actual pipeline device and streams profile, which was
    * successfully configured to the streaming device on start.
    */
-  getActiveProfile() {
-    if (this.started === false) return undefined;
+  // getActiveProfile() {
+  //   if (this.started === false) return undefined;
 
-    return new PipelineProfile(this.cxxPipeline.getActiveProfile());
-  }
+  //   return new PipelineProfile(this.pipeline.getActiveProfile());
+  // }
 }
