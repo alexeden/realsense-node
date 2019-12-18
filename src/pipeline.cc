@@ -125,8 +125,6 @@ class RSPipeline : public ObjectWrap<RSPipeline> {
 		auto frameset = ObjectWrap<RSFrameSet>::Unwrap(info[0].ToObject());
 		auto timeout = info[1].IsNumber() ? info[1].ToNumber().Int32Value() : 5000;
 
-        std::cerr << "wait for frame timeout is " << timeout << std::endl;
-
 		rs2_frame* frames = GetNativeResult<
 		  rs2_frame*>(rs2_pipeline_wait_for_frames, &this->error_, this->pipeline_, timeout, &this->error_);
 		if (!frames) return Boolean::New(info.Env(), false);
