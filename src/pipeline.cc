@@ -49,7 +49,7 @@ class RSPipeline : public ObjectWrap<RSPipeline> {
 	}
 
   private:
-  	friend class RSConfig;
+	friend class RSConfig;
 
 	static FunctionReference constructor;
 
@@ -64,8 +64,8 @@ class RSPipeline : public ObjectWrap<RSPipeline> {
 	}
 
 	Napi::Value Create(const CallbackInfo& info) {
-		auto rsctx = ObjectWrap<RSContext>::Unwrap(info[0].ToObject());
-		if (!rsctx) return info.Env().Undefined();
+		auto rsctx = info[0].IsObject() ? ObjectWrap<RSContext>::Unwrap(info[0].ToObject())
+										: ObjectWrap<RSContext>::Unwrap(RSContext::NewInstance(info.Env()));
 
 		this->pipeline_
 		  = GetNativeResult<rs2_pipeline*>(rs2_create_pipeline, &this->error_, rsctx->ctx_, &this->error_);
@@ -103,25 +103,30 @@ class RSPipeline : public ObjectWrap<RSPipeline> {
 	Napi::Value Start(const CallbackInfo& info) {
 		if (!this->pipeline_) return info.Env().Undefined();
 
-		rs2_pipeline_profile* profile = info[0].IsObject()
-          ? GetNativeResult<rs2_pipeline_profile*>(rs2_pipeline_start, &this->error_, this->pipeline_, &this->error_)
-          : GetNativeResult<rs2_pipeline_profile*>(rs2_pipeline_start_with_config, &this->error_, this->pipeline_, ObjectWrap<RSConfig>::Unwrap(info[0].ToObject())->config_, &this->error_);
+		rs2_pipeline_profile* profile
+		  = !info[0].IsObject() ? GetNativeResult<
+			  rs2_pipeline_profile*>(rs2_pipeline_start, &this->error_, this->pipeline_, &this->error_)
+								: GetNativeResult<rs2_pipeline_profile*>(
+								  rs2_pipeline_start_with_config,
+								  &this->error_,
+								  this->pipeline_,
+								  ObjectWrap<RSConfig>::Unwrap(info[0].ToObject())->config_,
+								  &this->error_);
 
 		return RSPipelineProfile::NewInstance(info.Env(), profile);
 	}
 
 	Napi::Value Stop(const CallbackInfo& info) {
-		if (!this->pipeline_) return info.Env().Undefined();
-
 		CallNativeFunc(rs2_pipeline_stop, &this->error_, this->pipeline_, &this->error_);
 		return info.This();
 	}
 
 	Napi::Value WaitForFrames(const CallbackInfo& info) {
 		auto frameset = ObjectWrap<RSFrameSet>::Unwrap(info[0].ToObject());
-		if (!frameset) return Boolean::New(info.Env(), false);
+		auto timeout = info[1].IsNumber() ? info[1].ToNumber().Int32Value() : 5000;
 
-		auto timeout	  = info[1].ToNumber().Int32Value();
+        std::cerr << "wait for frame timeout is " << timeout << std::endl;
+
 		rs2_frame* frames = GetNativeResult<
 		  rs2_frame*>(rs2_pipeline_wait_for_frames, &this->error_, this->pipeline_, timeout, &this->error_);
 		if (!frames) return Boolean::New(info.Env(), false);

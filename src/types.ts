@@ -181,13 +181,13 @@ export interface RSOptionRange {
 }
 
 export interface RSPipeline {
-  create(context: RSContext): this;
+  create(context?: RSContext): this;
   destroy(): this;
   getActiveProfile(): RSPipelineProfile;
   pollForFrames(frameset: RSFrameSet): boolean;
   start(config?: RSConfig): RSPipelineProfile;
   stop(): this;
-  waitForFrames(frameset: RSFrameSet, timeout: number): boolean;
+  waitForFrames(frameset: RSFrameSet, timeout?: number): boolean;
 }
 
 export interface RSPipelineProfile {

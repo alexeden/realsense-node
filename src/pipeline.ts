@@ -25,7 +25,7 @@ export class Pipeline {
   ) {
     this.cxxPipeline = new addon.RSPipeline();
     this.frameSet = new FrameSet();
-    this.cxxPipeline.create(this.ctx);
+    this.cxxPipeline.create();
     this.started = false;
 
     deleteAutomatically(this);
@@ -74,7 +74,7 @@ export class Pipeline {
    * @return {FrameSet|undefined} a FrameSet object or Undefined
    * @see See [Pipeline.latestFrame]{@link Pipeline#latestFrame}
    */
-  waitForFrames(timeout = 5000) {
+  waitForFrames(timeout?: number) {
     if (this.cxxPipeline.waitForFrames(this.frameSet.releaseAndReturn(), timeout)) {
       return this.frameSet;
     }
