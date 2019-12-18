@@ -1,4 +1,4 @@
-const { addon: rs, RSOption, Pipeline, RSStreamType } = require('../dist');
+const { addon, RSOption, Pipeline, RSStreamType } = require('../dist');
 
 process
   .once('SIGHUP', () => {
@@ -6,25 +6,32 @@ process
   })
   .once('SIGUSR2', () => {
     console.log('SIGUSR2!');
-    rs.cleanup();
+    addon.cleanup();
     // process.exit(0);
   });
 
 process.on('beforeExit', () => {
-  rs.cleanup();
+  console.log('before exit!!!!!!!');
+  addon.cleanup();
 });
-const config = new rs.RSConfig();
+const config = new addon.RSConfig();
 // config.enableAllStreams();
+config.disableAllStreams();
 config.enableStream(RSStreamType.Depth);
 
-const pipeline = new Pipeline();
-
+const pipeline = new addon.RSPipeline().create();
 const profile = pipeline.start(config);
 
+let i = 0;
+while (i++ < 5) {
+  console.log(pipeline.waitForFrames());
+}
 
-const device = profile.cxxPipelineProfile.getDevice();
 
-profile.cxxPipelineProfile.getStreams().forEach(stream => {
+
+const device = profile.getDevice();
+
+profile.getStreams().forEach(stream => {
   console.log(`${RSStreamType[stream.streamType]} stream ${stream.index}`, stream);
 });
 
@@ -32,7 +39,7 @@ console.log(pipeline.waitForFrames());
 console.log(pipeline.waitForFrames());
 
 console.log('Creating context...');
-const ctx = new rs.RSContext();
+const ctx = new addon.RSContext();
 
 console.log('Querying for devices...');
 const deviceList = ctx.queryDevices();

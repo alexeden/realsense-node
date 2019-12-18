@@ -122,16 +122,31 @@ class RSPipeline : public ObjectWrap<RSPipeline> {
 	}
 
 	Napi::Value WaitForFrames(const CallbackInfo& info) {
-		auto frameset = ObjectWrap<RSFrameSet>::Unwrap(info[0].ToObject());
+		// auto frameset = ObjectWrap<RSFrameSet>::Unwrap(info[0].ToObject());
 		auto timeout = info[1].IsNumber() ? info[1].ToNumber().Int32Value() : 5000;
+
+        std::cerr << "Waiting for frames for a maximum time of " << timeout << std::endl;
 
 		rs2_frame* frames = GetNativeResult<
 		  rs2_frame*>(rs2_pipeline_wait_for_frames, &this->error_, this->pipeline_, timeout, &this->error_);
-		if (!frames) return Boolean::New(info.Env(), false);
+		// if (!frames) return Boolean::New(info.Env(), false);
+        auto frameset = RSFrameSet::NewInstance(info.Env(), frames);
 
-		frameset->Replace(frames);
-		return Boolean::New(info.Env(), true);
+		// frameset->Replace(frames);
+		return frameset;
+        // Boolean::New(info.Env(), true);
 	}
+	// Napi::Value WaitForFrames(const CallbackInfo& info) {
+	// 	auto frameset = ObjectWrap<RSFrameSet>::Unwrap(info[0].ToObject());
+	// 	auto timeout = info[1].IsNumber() ? info[1].ToNumber().Int32Value() : 5000;
+
+	// 	rs2_frame* frames = GetNativeResult<
+	// 	  rs2_frame*>(rs2_pipeline_wait_for_frames, &this->error_, this->pipeline_, timeout, &this->error_);
+	// 	if (!frames) return Boolean::New(info.Env(), false);
+
+	// 	frameset->Replace(frames);
+	// 	return Boolean::New(info.Env(), true);
+	// }
 };
 
 Napi::FunctionReference RSPipeline::constructor;
