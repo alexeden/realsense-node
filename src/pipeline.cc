@@ -20,7 +20,6 @@ class RSPipeline : public ObjectWrap<RSPipeline> {
 			InstanceMethod("getActiveProfile", &RSPipeline::GetActiveProfile),
 			InstanceMethod("pollForFrames", &RSPipeline::PollForFrames),
 			InstanceMethod("start", &RSPipeline::Start),
-			InstanceMethod("startWithConfig", &RSPipeline::StartWithConfig),
 			InstanceMethod("stop", &RSPipeline::Stop),
 			InstanceMethod("waitForFrames", &RSPipeline::WaitForFrames),
 		  });
@@ -104,22 +103,11 @@ class RSPipeline : public ObjectWrap<RSPipeline> {
 	Napi::Value Start(const CallbackInfo& info) {
 		if (!this->pipeline_) return info.Env().Undefined();
 
-		rs2_pipeline_profile* prof
-		  = GetNativeResult<rs2_pipeline_profile*>(rs2_pipeline_start, &this->error_, this->pipeline_, &this->error_);
-		if (!prof) return info.Env().Undefined();
+		rs2_pipeline_profile* profile = info[0].IsObject()
+          ? GetNativeResult<rs2_pipeline_profile*>(rs2_pipeline_start, &this->error_, this->pipeline_, &this->error_)
+          : GetNativeResult<rs2_pipeline_profile*>(rs2_pipeline_start_with_config, &this->error_, this->pipeline_, ObjectWrap<RSConfig>::Unwrap(info[0].ToObject())->config_, &this->error_);
 
-		return RSPipelineProfile::NewInstance(info.Env(), prof);
-	}
-
-	Napi::Value StartWithConfig(const CallbackInfo& info) {
-		if (!this->pipeline_) return info.Env().Undefined();
-
-		RSConfig* config		   = ObjectWrap<RSConfig>::Unwrap(info[0].ToObject());
-		rs2_pipeline_profile* prof = GetNativeResult<
-		  rs2_pipeline_profile*>(rs2_pipeline_start_with_config, &this->error_, this->pipeline_, config->config_, &this->error_);
-		if (!prof) return info.Env().Undefined();
-
-		return RSPipelineProfile::NewInstance(info.Env(), prof);
+		return RSPipelineProfile::NewInstance(info.Env(), profile);
 	}
 
 	Napi::Value Stop(const CallbackInfo& info) {

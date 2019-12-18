@@ -185,8 +185,7 @@ export interface RSPipeline {
   destroy(): this;
   getActiveProfile(): RSPipelineProfile;
   pollForFrames(frameset: RSFrameSet): boolean;
-  start(): RSPipelineProfile;
-  startWithConfig(config: RSConfig): RSPipelineProfile;
+  start(config?: RSConfig): RSPipelineProfile;
   stop(): this;
   waitForFrames(frameset: RSFrameSet, timeout: number): boolean;
 }

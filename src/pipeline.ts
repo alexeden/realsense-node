@@ -1,5 +1,5 @@
 import { addon, deleteAutomatically } from './addon';
-import { RSPipeline } from './types';
+import { RSPipeline, RSConfig } from './types';
 import { FrameSet } from './frameset';
 import { PipelineProfile } from './pipeline-profile';
 
@@ -41,20 +41,13 @@ export class Pipeline {
     this.frameSet.destroy();
   }
 
-  /**
-   * Start streaming
-   * There are 2 acceptable syntax
-   * Syntax 1 uses the default configuration.
-   * Syntax 2 used the configured streams and or device of the config parameter
-   *
-   * @param {Config} [config] - the {@link Config} object to use for configuration
-   * @return {@link PipelineProfile}
-   */
-  start() {
+  start(
+    config?: RSConfig
+  ) {
     if (this.started === true) return undefined;
     this.started = true;
 
-    return new PipelineProfile(this.cxxPipeline.start());
+    return new PipelineProfile(this.cxxPipeline.start(config));
   }
 
   /**
