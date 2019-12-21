@@ -3,6 +3,7 @@
     "allowJs": false,
     "baseUrl": ".",
     "esModuleInterop": false,
+    "jsx": "react",
     "module": "commonjs",
     "moduleResolution": "node",
     "noImplicitAny": true,
